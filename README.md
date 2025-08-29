@@ -57,7 +57,7 @@ We will also use static code analysis, fuzz testing, and penetration testing thr
 |----------------|------------------------|-----------|----------------|
 | Johann Ramirez | johann.ramirez@wsu.edu | 011829488 |                |
 | Ross Kugler    | ross.kugler@wsu.edu    | 011835486 |                |
-| [Member 3]     | giahuy.ky@wsu.edu      | 011833522 |                |
+| Huy (Harry) Ky | giahuy.ky@wsu.edu      | 011833522 |                |
 | [Member 4]     | [email]                | xxxxxxxx  |                |
 | [Member 5]     | [email]                | xxxxxxxx  |                |
 | [Member 6]     | [email]                | xxxxxxxx  |                |
