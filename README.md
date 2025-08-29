@@ -53,14 +53,14 @@ We will also use static code analysis, fuzz testing, and penetration testing thr
 - Project Topic: Secure Messenger
 - Repository: https://github.com/jhanra13/DJABHR-SecDove
 
-| Name           | Email                  | WSU ID    | Contact Person |
-|----------------|------------------------|-----------|----------------|
-| Johann Ramirez | johann.ramirez@wsu.edu | 011829488 |                |
-| Ross Kugler    | ross.kugler@wsu.edu    | 011835486 |                |
-| Huy (Harry) Ky | giahuy.ky@wsu.edu      | 011833522 |                |
-| Benjamin Bordon| b.bordon@wsu.edu       | 011843215 |           | xxxxxxxx  |                |
-| [Member 5]     | []                | xxxxxxxx  |                |
-| [Member 6]     | [email]                | xxxxxxxx  |                |
+| Name           | Email                  | WSU ID    |
+|----------------|------------------------|-----------|
+| Johann Ramirez | johann.ramirez@wsu.edu | 011829488 |
+| Ross Kugler    | ross.kugler@wsu.edu    | 011835486 |
+| Huy (Harry) Ky | giahuy.ky@wsu.edu      | 011833522 |
+| Benjamin Bordon| b.bordon@wsu.edu       | 011843215 |
+| Dylan Gyori    | dylan.gyori@wsu.edu    | 011870945 |
+| Anthony Do     | anthony.do1@wsu.edu    | 011828757 |
 
 ## Collaborators
 The following accounts have been added as collaborators to the repository:
