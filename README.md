@@ -77,3 +77,4 @@ The following accounts have been added as collaborators to the repository:
 |         3 | Deliverable 3: Security Assessment       | Oct 27   | Validate the system against security goals using code review, penetration testing, and static/dynamic analysis. Identify vulnerabilities.                         |
 |         4 | Deliverable 4: Amend & Enhance           | Nov 27   | Update design and implementation with enhanced security. Develop countermeasures, validate fixes with regression testing, and document improvements.              |
 |         5 | Deliverable 5: Final Report & Demo       | Dec 1    | Present project outcomes, lessons learned, and insights. Finalize all artifacts (code, documentation, exploits, fixes) and demonstrate the build-break-fix cycle. |
+
