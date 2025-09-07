@@ -3,13 +3,13 @@
 A course project for CptS 428: Software Security and Reverse Engineering. SecureDove is a secure messaging application focused on privacy, confidentiality, and tamper resistance.
 
 ## Table of Contents
-- Project Overview
-- Development Approach
-- Security Goals
-- Technology Stack
-- Team Information
-- Collaborators
-- Project Milestones & Deliverables
+- [Project Overview](#project-overview)
+- [Development Approach](#development-approach)
+- [Security Goals](#security-goals)
+- [Technology Stack](#technology-stack)
+- [Team Information](#team-information)
+- [Collaborators](#collaborators)
+- [Project Milestones & Deliverables](#project-milestones--deliverables)
 
 ## Project Overview
 SecureDove aims to provide end-to-end encrypted messaging with strong authentication and integrity guarantees. Throughout development, we will incorporate rigorous testing and iterative hardening to meet well-defined security goals.
@@ -53,14 +53,14 @@ We will also use static code analysis, fuzz testing, and penetration testing thr
 - Project Topic: Secure Messenger
 - Repository: https://github.com/jhanra13/DJABHR-SecDove
 
-| Name           | Email                  | WSU ID    |
-|----------------|------------------------|-----------|
-| Johann Ramirez | johann.ramirez@wsu.edu | 011829488 |
-| Ross Kugler    | ross.kugler@wsu.edu    | 011835486 |
-| Huy (Harry) Ky | giahuy.ky@wsu.edu      | 011833522 |
-| Benjamin Bordon| b.bordon@wsu.edu       | 011843215 |
-| Dylan Gyori    | dylan.gyori@wsu.edu    | 011870945 |
-| Anthony Do     | anthony.do1@wsu.edu    | 011828757 |
+| Name             | Email                                                      | WSU ID    | GitHub                                           |
+|------------------|------------------------------------------------------------|-----------|--------------------------------------------------|
+| Johann Ramirez   | [johann.ramirez@wsu.edu](mailto:johann.ramirez@wsu.edu)    | 011829488 | [jhanra13](https://github.com/jhanra13)          |
+| Ross Kugler      | [ross.kugler@wsu.edu](mailto:ross.kugler@wsu.edu)          | 011835486 | [rk3026](https://github.com/rk3026)              |
+| Huy (Harry) Ky   | [giahuy.ky@wsu.edu](mailto:giahuy.ky@wsu.edu)              | 011833522 | [Harry908](https://github.com/Harry908)          |
+| Benjamin Bordon  | [b.bordon@wsu.edu](mailto:b.bordon@wsu.edu)                | 011843215 | [wizkid0101](https://github.com/wizkid0101)      |
+| Dylan Gyori      | [dylan.gyori@wsu.edu](mailto:dylan.gyori@wsu.edu)          | 011870945 | [JustDylan](https://github.com/JustDylan)        |
+| Anthony Do       | [anthony.do1@wsu.edu](mailto:anthony.do1@wsu.edu)          | 011828757 | [anthonyd03](https://github.com/anthonyd03)      |
 
 ## Collaborators
 The following accounts have been added as collaborators to the repository:
