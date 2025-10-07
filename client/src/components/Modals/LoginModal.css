@@ -1,0 +1,207 @@
+.login-modal-content {
+    background: white;
+    border-radius: 12px;
+    padding: 40px;
+    width: 90%;
+    max-width: 400px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    animation: slideUp 0.3s ease;
+}
+
+.login-logo {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.logo-circle {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary-blue-start), var(--primary-blue-end));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 32px;
+    font-weight: 600;
+    font-family: 'Montserrat', sans-serif;
+}
+
+.login-title {
+    text-align: center;
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--text-dark);
+    margin: 0 0 25px 0;
+    font-family: 'Montserrat', sans-serif;
+}
+
+.login-error {
+    background-color: #ffe0e0;
+    color: #a00000;
+    padding: 12px;
+    margin-bottom: 20px;
+    border-radius: 6px;
+    font-size: 14px;
+    text-align: center;
+    border: 1px solid #ffb4b4;
+}
+
+.login-form {
+    display: flex;
+    flex-direction: column;
+}
+
+.login-form .form-group {
+    margin-bottom: 20px;
+}
+
+.login-form .form-group label {
+    display: block;
+    font-weight: 600;
+    color: var(--text-dark);
+    margin-bottom: 8px;
+    font-size: 14px;
+    font-family: 'Montserrat', sans-serif;
+}
+
+.login-form .form-group input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--border-gray);
+    border-radius: 6px;
+    font-size: 15px;
+    font-family: 'Montserrat', sans-serif;
+    transition: border-color 0.3s ease;
+}
+
+.login-form .form-group input:focus {
+    outline: none;
+    border-color: var(--primary-blue-start);
+}
+
+.form-check {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+.form-check input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.form-check label {
+    font-size: 14px;
+    color: var(--text-dark);
+    cursor: pointer;
+    font-family: 'Montserrat', sans-serif;
+}
+
+.login-button {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(to right, var(--primary-blue-start), var(--primary-blue-end));
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    font-family: 'Montserrat', sans-serif;
+    margin-bottom: 20px;
+}
+
+.login-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(71, 104, 181, 0.4);
+}
+
+.login-divider {
+    position: relative;
+    text-align: center;
+    margin: 25px 0;
+}
+
+.login-divider::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: var(--border-gray);
+}
+
+.login-divider span {
+    position: relative;
+    background: white;
+    padding: 0 15px;
+    color: var(--text-light);
+    font-size: 14px;
+    font-family: 'Montserrat', sans-serif;
+}
+
+.social-button {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 6px;
+    font-size: 15px;
+    font-weight: 600;
+    color: white;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-family: 'Montserrat', sans-serif;
+}
+
+.social-button.google {
+    background-color: #dd4b39;
+}
+
+.social-button.google:hover {
+    background-color: #c23321;
+    transform: translateY(-1px);
+}
+
+.social-button.facebook {
+    background-color: #3b5998;
+}
+
+.social-button.facebook:hover {
+    background-color: #2d4373;
+    transform: translateY(-1px);
+}
+
+.login-footer {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 14px;
+    color: var(--text-dark);
+    font-family: 'Montserrat', sans-serif;
+}
+
+.link-button {
+    background: none;
+    border: none;
+    color: var(--primary-blue-start);
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    font-family: 'Montserrat', sans-serif;
+    text-decoration: none;
+    padding: 0;
+}
+
+.link-button:hover {
+    text-decoration: underline;
+}

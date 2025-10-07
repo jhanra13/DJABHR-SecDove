@@ -1,80 +1,426 @@
-# SecureDove: A Secure Messenger
+# SecDove - Secure Messaging App
 
-A course project for CptS 428: Software Security and Reverse Engineering. SecureDove is a secure messaging application focused on privacy, confidentiality, and tamper resistance.
-
-## Table of Contents
-- [Project Overview](#project-overview)
-- [Development Approach](#development-approach)
-- [Security Goals](#security-goals)
-- [Technology Stack](#technology-stack)
-- [Team Information](#team-information)
-- [Collaborators](#collaborators)
-- [Project Milestones & Deliverables](#project-milestones--deliverables)
+A secure messaging application with end-to-end encryption (E2EE) built with React (client) and Node.js (server).
 
 ## Project Overview
-SecureDove aims to provide end-to-end encrypted messaging with strong authentication and integrity guarantees. Throughout development, we will incorporate rigorous testing and iterative hardening to meet well-defined security goals.
 
-## Development Approach
-We are evaluating two complementary approaches and will choose the one that best aligns with implementation and testing as the project evolves.
+SecDove is a client-server messaging application that ensures private communication through end-to-end encryption. Messages are encrypted on the sender's device and can only be decrypted by the intended recipient.
 
-### Option 1: Secure Development Lifecycle
-A structured cycle that integrates security throughout:
-- Design & Requirements: Define security goals such as encryption, authentication, and resistance to attacks.
-- Implementation: Build core messaging features with cryptographic protections and safe coding practices.
-- Testing & Evaluation: Use static analysis, fuzzing, and penetration testing to identify weaknesses.
-- Improvement: Refine the system and patch vulnerabilities based on test results.
+## Architecture
 
-### Option 2: Layered Security Model
-A defense-in-depth strategy that secures the messenger in layers:
-- Confidentiality Layer: End-to-end encryption ensures only intended recipients can read messages.
-- Integrity Layer: Digital signatures and message authentication codes protect against tampering.
-- Authentication Layer: Strong identity checks prevent impersonation and unauthorized access.
-- Resilience Layer: Continuous testing and adversarial evaluation strengthen the system against real-world attacks.
+### Client-Server Architecture
+```
+┌─────────────────┐         ┌─────────────────┐         ┌─────────────────┐
+│   Client A      │◄───────►│   Server        │◄───────►│   Client B      │
+│   (React Web)   │         │   (Node.js)     │         │   (React Web)   │
+│                 │         │                 │         │                 │
+│  - Encryption   │         │  - Routing      │         │  - Decryption   │
+│  - Key Gen      │         │  - Storage      │         │  - Key Gen      │
+│  - UI/UX        │         │  - Auth         │         │  - UI/UX        │
+└─────────────────┘         └─────────────────┘         └─────────────────┘
+```
 
-## Security Goals
-SecureDove will adopt widely accepted communication security practices, including:
-- End-to-End Encryption (E2EE): Messages are encrypted (e.g., AES-256) for confidentiality with secure key exchange (e.g., Diffie-Hellman or RSA).
-- Message Integrity: Digital signatures and verification methods detect tampering and confirm sender authenticity.
-- Forward Secrecy: Ephemeral, session-based keys ensure past conversations remain protected even if long-term keys are compromised.
+## Quick Start
 
-We will also use static code analysis, fuzz testing, and penetration testing throughout development to evaluate and strengthen security.
+### Prerequisites
+- Node.js (v16 or higher)
+- npm
 
-## Technology Stack
-- Backend: Python (Flask or FastAPI) or Node.js (Express) for the messaging server
-- Client: Python CLI or lightweight web UI
-- Database: SQLite or PostgreSQL for user and message metadata
-- Encryption & Security Libraries:
-  - Python: cryptography, PyNaCl
-  - Node.js: crypto, jsonwebtoken (if applicable)
-- Version Control: GitHub
+### Installation & Running
 
-## Team Information
-- Team Name: SecureDove
-- Project Topic: Secure Messenger
-- Repository: https://github.com/jhanra13/DJABHR-SecDove
+1. Clone/download the project
+2. Install dependencies:
+   ```bash
+   # Server dependencies
+   cd server
+   npm install
+   
+   # Client dependencies  
+   cd ../client
+   npm install
+   ```
 
-| Name             | Email                                                      | WSU ID    | GitHub                                           |
-|------------------|------------------------------------------------------------|-----------|--------------------------------------------------|
-| Johann Ramirez   | [johann.ramirez@wsu.edu](mailto:johann.ramirez@wsu.edu)    | 011829488 | [jhanra13](https://github.com/jhanra13)          |
-| Ross Kugler      | [ross.kugler@wsu.edu](mailto:ross.kugler@wsu.edu)          | 011835486 | [rk3026](https://github.com/rk3026)              |
-| Huy (Harry) Ky   | [giahuy.ky@wsu.edu](mailto:giahuy.ky@wsu.edu)              | 011833522 | [Harry908](https://github.com/Harry908)          |
-| Benjamin Bordon  | [b.bordon@wsu.edu](mailto:b.bordon@wsu.edu)                | 011843215 | [wizkid0101](https://github.com/wizkid0101)      |
-| Dylan Gyori      | [dylan.gyori@wsu.edu](mailto:dylan.gyori@wsu.edu)          | 011870945 | [JustDylan](https://github.com/JustDylan)        |
-| Anthony Do       | [anthony.do1@wsu.edu](mailto:anthony.do1@wsu.edu)          | 011828757 | [anthonyd03](https://github.com/anthonyd03)      |
+3. Start both server and client:
+   ```bash
+   # From project root directory
+   start.bat  # Windows - or run manually below
+   ```
+   
+   Or manually:
+   ```bash
+   # Terminal 1 - Server
+   cd server
+   npm start
+   
+   # Terminal 2 - Client  
+   cd client
+   npm run dev
+   ```
 
-## Collaborators
-The following accounts have been added as collaborators to the repository:
-- Instructor: xlin29
-- TA: reflate31
+4. Open browser to `http://localhost:5173` and start messaging!
 
-## Project Milestones & Deliverables
+## Tech Stack
 
-| Milestone | Deliverable                              | Due Date | Description                                                                                                                                                       |
-|----------:|------------------------------------------|----------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-|         1 | Deliverable 1-1: Team Setup              | Sep 2    | Submit team information, set up the repository, and select the project topic.                                                                                     |
-|         2 | Deliverable 2-1: Project Specification   | Sep 22   | Define project requirements and security goals/metrics. Provide project planning and quality planning documentation.                                              |
-|         2 | Deliverable 2-2: Design & Implementation | Oct 6    | Produce design models (use case diagrams, architecture) and implement an initial prototype with documentation.                                                    |
-|         3 | Deliverable 3: Security Assessment       | Oct 27   | Validate the system against security goals using code review, penetration testing, and static/dynamic analysis. Identify vulnerabilities.                         |
-|         4 | Deliverable 4: Amend & Enhance           | Nov 27   | Update design and implementation with enhanced security. Develop countermeasures, validate fixes with regression testing, and document improvements.              |
-|         5 | Deliverable 5: Final Report & Demo       | Dec 1    | Present project outcomes, lessons learned, and insights. Finalize all artifacts (code, documentation, exploits, fixes) and demonstrate the build-break-fix cycle. |
+### Client (Frontend)
+- **Framework**: React 18+
+- **UI Library**: Material-UI or Tailwind CSS
+- **State Management**: Redux Toolkit or Zustand
+- **Encryption**: Web Crypto API + libsodium.js (for additional crypto operations)
+- **WebSocket Client**: Socket.io-client
+- **HTTP Client**: Axios
 
+### Server (Backend)
+- **Runtime**: Node.js
+- **Framework**: Express.js
+- **Database**: SQLite3 (local file-based database)
+- **WebSocket**: Socket.io
+- **Authentication**: JWT (JSON Web Tokens)
+- **Password Hashing**: bcryptjs
+
+## Key Features
+
+### Core Features
+1. **User Authentication**
+   - Sign up / Sign in
+   - JWT-based authentication
+   - Secure password hashing (bcrypt)
+
+2. **End-to-End Encryption**
+   - Public/Private key pair generation (RSA or Curve25519)
+   - Message encryption using recipient's public key
+   - Message decryption using private key (stored locally)
+   - Key exchange protocol
+
+3. **Real-time Messaging**
+   - One-on-one chat
+   - Message delivery status (sent, delivered, read)
+   - Real-time updates via WebSockets
+
+4. **User Management**
+   - User profiles
+   - Contact list
+   - Search for users
+
+### Security Features
+- Private keys never leave the client device
+- Server cannot decrypt messages
+- Perfect forward secrecy (optional: Signal Protocol)
+- Message integrity verification
+
+## Project Structure
+
+### Client Structure
+```
+client/
+├── public/
+├── src/
+│   ├── components/
+│   │   ├── Auth/
+│   │   │   ├── Login.jsx
+│   │   │   └── Register.jsx
+│   │   ├── Chat/
+│   │   │   ├── ChatWindow.jsx
+│   │   │   ├── MessageList.jsx
+│   │   │   ├── MessageInput.jsx
+│   │   │   └── ContactList.jsx
+│   │   └── Layout/
+│   │       ├── Header.jsx
+│   │       └── Sidebar.jsx
+│   ├── services/
+│   │   ├── api.js
+│   │   ├── encryption.js
+│   │   ├── websocket.js
+│   │   └── keyManager.js
+│   ├── store/
+│   │   ├── authSlice.js
+│   │   ├── chatSlice.js
+│   │   └── store.js
+│   ├── utils/
+│   │   ├── crypto.js
+│   │   └── helpers.js
+│   ├── App.jsx
+│   └── main.jsx
+├── package.json
+└── vite.config.js
+```
+
+### Server Structure
+```
+server/
+├── src/
+│   ├── controllers/
+│   │   ├── authController.js
+│   │   ├── userController.js
+│   │   └── messageController.js
+│   ├── models/
+│   │   ├── User.js
+│   │   ├── Message.js
+│   │   └── PublicKey.js
+│   ├── routes/
+│   │   ├── auth.js
+│   │   ├── users.js
+│   │   └── messages.js
+│   ├── middleware/
+│   │   ├── auth.js
+│   │   └── errorHandler.js
+│   ├── services/
+│   │   ├── messageService.js
+│   │   └── userService.js
+│   ├── socket/
+│   │   └── socketHandler.js
+│   ├── config/
+│   │   ├── database.js
+│   │   └── redis.js
+│   └── server.js
+├── package.json
+└── .env
+```
+
+## Database Schema (SQLite)
+
+### Users Table
+```sql
+CREATE TABLE users (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  username TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  public_key TEXT NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### Messages Table
+```sql
+CREATE TABLE messages (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  sender_id INTEGER NOT NULL,
+  recipient_id INTEGER NOT NULL,
+  content TEXT NOT NULL, -- Encrypted content
+  sender_public_key TEXT NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (sender_id) REFERENCES users(id),
+  FOREIGN KEY (recipient_id) REFERENCES users(id)
+);
+```
+
+### Contacts Table
+```sql
+CREATE TABLE contacts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  contact_username TEXT NOT NULL,
+  contact_id INTEGER,
+  nickname TEXT,
+  public_key TEXT,
+  is_blocked INTEGER DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id),
+  FOREIGN KEY (contact_id) REFERENCES users(id)
+);
+```
+
+## Encryption Flow
+
+### Key Generation (Client)
+1. Generate RSA or Curve25519 key pair on first login
+2. Store private key in browser's IndexedDB (encrypted with user's password)
+3. Send public key to server for storage
+
+### Message Encryption (Sender)
+1. Generate random AES-256 symmetric key
+2. Encrypt message with AES symmetric key
+3. Encrypt AES key with recipient's public key (RSA/ECDH)
+4. Send encrypted message + encrypted key to server
+
+### Message Decryption (Recipient)
+1. Receive encrypted message + encrypted key from server
+2. Decrypt AES key using private key
+3. Decrypt message using AES key
+4. Display plaintext message
+
+## API Endpoints
+
+### Authentication
+- `POST /api/auth/register` - Register new user
+- `POST /api/auth/login` - Login user
+- `POST /api/auth/logout` - Logout user
+- `GET /api/auth/refresh` - Refresh JWT token
+
+### Users
+- `GET /api/users/profile` - Get user profile
+- `GET /api/users/search?q=username` - Search users
+- `GET /api/users/:id/public-key` - Get user's public key
+- `POST /api/users/contacts` - Add contact
+
+### Messages
+- `GET /api/messages/:userId` - Get message history with user
+- `POST /api/messages/send` - Send encrypted message
+- `PUT /api/messages/:id/read` - Mark message as read
+
+### WebSocket Events
+- `connect` - Establish connection
+- `message:send` - Send real-time message
+- `message:receive` - Receive real-time message
+- `typing` - Typing indicator
+- `online` - User online status
+
+## Development Phases
+
+### Phase 1: Foundation
+- Set up project structure
+- Basic authentication (register/login)
+- Database schema and models
+- JWT implementation
+
+### Phase 2: Core Messaging
+- WebSocket connection
+- Basic message sending/receiving (unencrypted)
+- Real-time updates
+- Message history
+
+### Phase 3: Encryption
+- Key pair generation
+- Public key exchange
+- Message encryption/decryption
+- Secure key storage
+
+### Phase 4: UI/UX
+- Chat interface
+- Contact list
+- Message status indicators
+- Responsive design
+
+### Phase 5: Advanced Features
+- File sharing (encrypted)
+- Group chat
+- Message search
+- Push notifications
+
+## Security Considerations
+
+1. **Client-Side Security**
+   - Private keys never sent to server
+   - Keys encrypted at rest in IndexedDB
+   - Secure key derivation from password (PBKDF2/Argon2)
+   - XSS protection
+
+2. **Server-Side Security**
+   - HTTPS only
+   - Rate limiting
+   - SQL injection prevention
+   - CSRF protection
+   - Input validation
+
+3. **Authentication**
+   - Secure password hashing (bcrypt/Argon2)
+   - JWT with short expiration
+   - Refresh token rotation
+   - Account lockout after failed attempts
+
+## Getting Started
+
+### Prerequisites
+- Node.js 16+ installed
+- npm
+
+### Installation
+
+#### Automatic Setup (Windows)
+Simply run the batch script:
+```bash
+start.bat
+```
+
+#### Manual Setup
+
+1. **Install Server Dependencies:**
+   ```bash
+   cd server
+   npm install
+   ```
+
+2. **Install Client Dependencies:**
+   ```bash
+   cd ../client
+   npm install
+   ```
+
+### Running the Application
+
+#### Option 1: Batch Script (Windows)
+```bash
+start.bat
+```
+
+#### Option 2: Manual Startup
+
+1. **Terminal 1 - Start Server:**
+   ```bash
+   cd server
+   npm start
+   ```
+
+2. **Terminal 2 - Start Client:**
+   ```bash
+   cd client
+   npm run dev
+   ```
+
+### Usage
+
+1. Open browser to `http://localhost:5173`
+2. Register a new account (RSA key pair generated automatically)
+3. Login with your credentials
+4. Add contacts and start secure messaging!
+
+The application will be available at:
+- **Client:** http://localhost:5173
+- **Server API:** http://localhost:8000
+
+## API Documentation
+
+### Authentication Endpoints
+- `POST /api/auth/register` - Register new user
+- `POST /api/auth/login` - Login user
+- `POST /api/auth/logout` - Logout user
+- `GET /api/auth/verify` - Verify token
+
+### User Endpoints
+- `GET /api/users/profile` - Get user profile
+- `GET /api/users/search?q=username` - Search users
+- `GET /api/users/:id/public-key` - Get user's public key
+
+### Message Endpoints
+- `GET /api/messages/:userId` - Get message history with user
+- `POST /api/messages/send` - Send encrypted message
+- `PUT /api/messages/:id/read` - Mark message as read
+- `GET /api/messages/unread/count` - Get unread message count
+
+### Contact Endpoints
+- `GET /api/contacts` - Get user's contacts
+- `POST /api/contacts` - Add contact
+- `PUT /api/contacts/:id` - Update contact
+- `DELETE /api/contacts/:id` - Remove contact
+
+### WebSocket Events
+- `authenticate` - Authenticate socket connection
+- `message:send` - Send real-time message
+- `message:receive` - Receive real-time message
+- `typing:start/stop` - Typing indicators
+- `user_online/offline` - User presence
+
+## Future Enhancements
+- Mobile apps (React Native)
+- Video/Voice calls (WebRTC)
+- Group messaging
+- Message deletion with proof of deletion
+- Disappearing messages
+- Backup and restore (encrypted)
+- Multi-device synchronization
+
+## License
+MIT
+
+## Contributing
+Pull requests are welcome. For major changes, please open an issue first.

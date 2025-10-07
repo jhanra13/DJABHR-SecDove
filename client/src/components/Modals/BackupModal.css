@@ -1,0 +1,259 @@
+.backup-modal {
+    max-width: 600px;
+    width: 90%;
+}
+
+.backup-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+.tab-button {
+    flex: 1;
+    padding: 12px 20px;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 500;
+    color: #666;
+    transition: all 0.3s ease;
+}
+
+.tab-button:hover {
+    background: #f5f5f5;
+    color: #333;
+}
+
+.tab-button.active {
+    color: #007bff;
+    border-bottom-color: #007bff;
+}
+
+.storage-stats {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.storage-stats h3 {
+    margin: 0 0 10px 0;
+    font-size: 16px;
+    color: #333;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.stat-label {
+    font-size: 13px;
+    color: #666;
+}
+
+.stat-value {
+    font-size: 20px;
+    font-weight: 600;
+    color: #007bff;
+}
+
+.backup-section,
+.restore-section {
+    padding: 10px 0;
+}
+
+.info-box {
+    background: #e3f2fd;
+    border-left: 4px solid #2196f3;
+    padding: 15px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+}
+
+.info-box p {
+    margin: 5px 0;
+    font-size: 14px;
+    color: #1565c0;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #333;
+    font-size: 14px;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: border-color 0.3s ease;
+    box-sizing: border-box;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.form-group input:disabled {
+    background: #f5f5f5;
+    cursor: not-allowed;
+}
+
+.form-group input[type="file"] {
+    padding: 8px;
+    cursor: pointer;
+}
+
+.backup-info {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.backup-info h4 {
+    margin: 0 0 10px 0;
+    font-size: 15px;
+    color: #333;
+}
+
+.info-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 14px;
+}
+
+.info-grid div {
+    display: flex;
+    justify-content: space-between;
+}
+
+.info-grid strong {
+    color: #666;
+    font-weight: 500;
+}
+
+.btn-primary {
+    width: 100%;
+    padding: 12px 20px;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.btn-primary:hover:not(:disabled) {
+    background: #0056b3;
+}
+
+.btn-primary:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
+.btn-danger {
+    width: 100%;
+    padding: 10px 16px;
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.btn-danger:hover:not(:disabled) {
+    background: #c82333;
+}
+
+.btn-danger:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
+.danger-zone {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 2px solid #f0f0f0;
+}
+
+.danger-zone h4 {
+    margin: 0 0 15px 0;
+    color: #dc3545;
+    font-size: 16px;
+}
+
+.warning-text {
+    margin-top: 10px;
+    font-size: 13px;
+    color: #dc3545;
+    font-style: italic;
+}
+
+.error-message {
+    background: #f8d7da;
+    border: 1px solid #f5c6cb;
+    color: #721c24;
+    padding: 12px;
+    border-radius: 6px;
+    margin-bottom: 15px;
+    font-size: 14px;
+}
+
+.success-message {
+    background: #d4edda;
+    border: 1px solid #c3e6cb;
+    color: #155724;
+    padding: 12px;
+    border-radius: 6px;
+    margin-bottom: 15px;
+    font-size: 14px;
+}
+
+/* Responsive design */
+@media (max-width: 600px) {
+    .backup-modal {
+        width: 95%;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .tab-button {
+        font-size: 14px;
+        padding: 10px 15px;
+    }
+}

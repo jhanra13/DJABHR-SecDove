@@ -1,0 +1,34 @@
+{
+  "name": "secdove-server",
+  "version": "1.0.0",
+  "description": "Secure messaging server with end-to-end encryption",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "init-db": "node scripts/init-db.js",
+    "clear-db": "node scripts/clear-db.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.7.4",
+    "jsonwebtoken": "^9.0.2",
+    "bcryptjs": "^2.4.3",
+    "sqlite3": "^5.1.6",
+    "cors": "^2.8.5",
+    "helmet": "^7.1.0",
+    "express-rate-limit": "^7.1.5",
+    "libsodium-wrappers": "^0.7.15",
+    "tweetnacl": "^1.0.3",
+    "tweetnacl-util": "^0.15.1",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "keywords": ["messaging", "encryption", "websocket", "sqlite"],
+  "author": "",
+  "license": "MIT"
+}

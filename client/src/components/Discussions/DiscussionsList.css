@@ -1,0 +1,109 @@
+.discussions {
+  width: var(--discussions-width);
+  height: var(--container-height);
+  border-right: 1px solid var(--border-gray);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Search Bar Styles */
+.search-bar {
+  padding: var(--spacing-md);
+  border-bottom: 1px solid var(--border-gray);
+  background-color: var(--bg-light);
+}
+
+.search-container {
+  display: flex;
+  align-items: center;
+  background-color: var(--bg-white);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1px solid var(--border-gray);
+}
+
+.search-container input {
+  border: none;
+  outline: none;
+  margin-left: var(--spacing-sm);
+  width: 100%;
+  font-size: 0.9rem;
+}
+
+.search-container svg {
+  color: var(--text-light);
+}
+
+/* Discussion Items */
+.discussion-item {
+  display: flex;
+  align-items: center;
+  padding: var(--spacing-md);
+  border-bottom: 1px solid var(--border-gray);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background-color: var(--bg-light);
+}
+
+.discussion-item:hover {
+  background-color: var(--bg-white);
+}
+
+.discussion-item.active {
+  background-color: var(--bg-white);
+  border-right: 4px solid var(--primary-blue-start);
+}
+
+.discussion-avatar {
+  width: var(--avatar-size);
+  height: var(--avatar-size);
+  border-radius: 50%;
+  background-position: center;
+  background-size: cover;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.online-indicator {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: var(--online-dot-size);
+  height: var(--online-dot-size);
+  background-color: var(--online-green);
+  border: 2px solid var(--bg-white);
+  border-radius: 50%;
+  animation: pulse 1.5s infinite;
+}
+
+.discussion-content {
+  margin-left: var(--spacing-md);
+  flex: 1;
+  min-width: 0; /* Enables text truncation */
+}
+
+.discussion-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: var(--spacing-xs);
+  color: var(--text-dark);
+}
+
+.discussion-message {
+  color: var(--text-light);
+  font-size: 0.8rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.discussion-time {
+  font-size: 0.7rem;
+  color: var(--text-light);
+  margin-left: var(--spacing-md);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background-color: var(--bg-white);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-gray);
+  flex-shrink: 0;
+}
