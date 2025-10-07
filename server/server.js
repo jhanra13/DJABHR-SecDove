@@ -1,10 +1,13 @@
 import express from 'express';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import dotenv from 'dotenv';
 import { apiLimiter } from './middleware/rateLimiter.js';
 import { ensureDatabaseIntegrity } from './utils/databaseVerification.js';
+import { verifyToken } from './utils/auth.js';
 
 // Import routes
 import authRoutes from './routes/auth.js';
@@ -16,8 +19,21 @@ import messagesRoutes from './routes/messages.js';
 dotenv.config();
 
 const app = express();
+const httpServer = createServer(app);
 const PORT = process.env.PORT || 3000;
 const isDevelopment = process.env.NODE_ENV === 'development';
+
+// Socket.IO setup with CORS
+const io = new Server(httpServer, {
+  cors: {
+    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+    credentials: true,
+    methods: ['GET', 'POST']
+  }
+});
+
+// Make io accessible to routes
+app.set('io', io);
 
 // Security middleware
 app.use(helmet({
@@ -96,6 +112,60 @@ app.use((err, req, res, next) => {
   });
 });
 
+// Socket.IO connection handling
+io.on('connection', (socket) => {
+  console.log('🔌 Client connected:', socket.id);
+  
+  // Authenticate socket connection
+  socket.on('authenticate', async (token) => {
+    try {
+      const decoded = verifyToken(token);
+      socket.userId = decoded.userId;
+      socket.username = decoded.username;
+      
+      // Join user's personal room
+      socket.join(`user:${socket.username}`);
+      
+      console.log(`✅ User ${socket.username} authenticated on socket ${socket.id}`);
+      socket.emit('authenticated', { success: true });
+    } catch (error) {
+      console.error('❌ Socket authentication error:', error);
+      socket.emit('authenticated', { success: false, error: 'Invalid token' });
+      socket.disconnect();
+    }
+  });
+  
+  // Join conversation room
+  socket.on('join-conversation', (conversationId) => {
+    if (socket.username) {
+      const roomName = `conversation:${conversationId}`;
+      socket.join(roomName);
+      
+      // Log room info
+      const room = io.sockets.adapter.rooms.get(roomName);
+      const clientCount = room ? room.size : 0;
+      
+      console.log(`✅ User ${socket.username} joined ${roomName}`);
+      console.log(`👥 Total clients in room: ${clientCount}`);
+    } else {
+      console.warn('⚠️ Socket tried to join conversation but not authenticated');
+    }
+  });
+  
+  // Leave conversation room
+  socket.on('leave-conversation', (conversationId) => {
+    if (socket.username) {
+      const roomName = `conversation:${conversationId}`;
+      socket.leave(roomName);
+      console.log(`📤 User ${socket.username} left ${roomName}`);
+    }
+  });
+  
+  socket.on('disconnect', () => {
+    console.log('🔌 Client disconnected:', socket.id);
+  });
+});
+
 // Start server with database verification
 async function startServer() {
   try {
@@ -103,7 +173,7 @@ async function startServer() {
     await ensureDatabaseIntegrity();
     
     // Start server
-    app.listen(PORT, () => {
+    httpServer.listen(PORT, () => {
       console.log(`
 ╔════════════════════════════════════════╗
 ║     SecureDove Server Started          ║
@@ -111,6 +181,7 @@ async function startServer() {
 ║  Port: ${PORT.toString().padEnd(32)}  ║
 ║  Environment: ${(process.env.NODE_ENV || 'development').padEnd(23)}  ║
 ║  CORS Origin: ${(process.env.CORS_ORIGIN || 'http://localhost:5173').padEnd(23)}  ║
+║  WebSocket: Enabled                    ║
 ╚════════════════════════════════════════╝
       `);
       
@@ -149,10 +220,11 @@ startServer();
 // Graceful shutdown
 process.on('SIGTERM', () => {
   console.log('SIGTERM signal received: closing HTTP server');
-  server.close(() => {
+  httpServer.close(() => {
     console.log('HTTP server closed');
     process.exit(0);
   });
 });
 
 export default app;
+export { io };

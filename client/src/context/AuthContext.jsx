@@ -40,16 +40,16 @@ export const AuthProvider = ({ children }) => {
         try {
           const parsed = JSON.parse(sessionData);
           
-          // Security check: privateKey must exist in memory for session to be valid
-          // Since privateKey is never stored in localStorage (security best practice),
-          // it will always be undefined after page reload.
-          // This forces re-login, which is the secure behavior for E2EE apps.
-          if (!parsed.privateKey) {
-            console.log('🔐 AuthProvider: No privateKey in memory, clearing session (requires re-login)');
-            clearSession();
-          } else {
-            setCurrentSession(parsed);
-          }
+          // Restore session without privateKey
+          // The privateKey will need to be decrypted when needed
+          // For now, keep the session active with token
+          setCurrentSession({
+            ...parsed,
+            token: token,
+            privateKey: null // Will be null until password is re-entered or derived
+          });
+          
+          console.log('🔐 AuthProvider: Session restored from localStorage');
         } catch (err) {
           console.error('Session init error:', err);
           clearSession();
@@ -142,6 +142,7 @@ export const AuthProvider = ({ children }) => {
         salt: response.user.salt,
         encrypted_private_key: response.user.encrypted_private_key,
         privateKey: null, // Will be set after login
+        token: response.token,
         loginTime: Date.now()
       };
 
@@ -193,6 +194,7 @@ export const AuthProvider = ({ children }) => {
         salt: response.user.salt,
         encrypted_private_key: response.user.encrypted_private_key,
         privateKey: privateKey, // Store in memory only
+        token: response.token,
         loginTime: Date.now()
       };
 

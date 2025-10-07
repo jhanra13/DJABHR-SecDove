@@ -33,16 +33,37 @@ router.post('/', authenticateToken, async (req, res) => {
       [conversation_id, content_key_number, encrypted_msg_content, timestamp]
     );
 
+    const messageData = {
+      id: result.id,
+      conversation_id,
+      content_key_number,
+      encrypted_msg_content,
+      created_at: timestamp,
+      is_deleted: 0
+    };
+
+    // Emit real-time message to all participants in the conversation
+    const io = req.app.get('io');
+    console.log('📡 IO instance available:', !!io);
+    
+    if (io) {
+      const roomName = `conversation:${conversation_id}`;
+      console.log('📨 Emitting new-message to room:', roomName);
+      console.log('📦 Message data:', { id: messageData.id, conversation_id });
+      
+      // Get all sockets in this room
+      const room = io.sockets.adapter.rooms.get(roomName);
+      console.log('👥 Clients in room:', room ? room.size : 0);
+      
+      io.to(roomName).emit('new-message', messageData);
+      console.log('✅ Emitted new-message event');
+    } else {
+      console.error('❌ IO instance not available!');
+    }
+
     res.status(201).json({
       message: 'Message sent successfully',
-      messageData: {
-        id: result.id,
-        conversation_id,
-        content_key_number,
-        encrypted_msg_content,
-        created_at: timestamp,
-        is_deleted: 0
-      }
+      messageData
     });
   } catch (error) {
     console.error('Send message error:', error);

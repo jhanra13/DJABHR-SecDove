@@ -1,5 +1,6 @@
-// WebSocket Context for Real-time Communication
+// WebSocket Context for Real-time Communication using Socket.IO
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { io } from 'socket.io-client';
 import { useAuth } from './AuthContext';
 
 console.log('🌐 WebSocketContext: Module loaded');
@@ -18,99 +19,141 @@ export const WebSocketProvider = ({ children }) => {
   console.log('🌐 WebSocketProvider: Initializing...');
   const { currentSession } = useAuth();
   const [connected, setConnected] = useState(false);
-  const [messages, setMessages] = useState([]);
-  const wsRef = useRef(null);
-  const reconnectTimeoutRef = useRef(null);
+  const socketRef = useRef(null);
+  const eventHandlersRef = useRef(new Map());
 
+  // Connect/disconnect socket based on authentication
   useEffect(() => {
-    if (!currentSession) {
+    if (!currentSession?.token) {
       // Disconnect if no session
-      if (wsRef.current) {
-        wsRef.current.close();
-        wsRef.current = null;
+      if (socketRef.current) {
+        console.log('🔌 Disconnecting socket - no session');
+        socketRef.current.disconnect();
+        socketRef.current = null;
       }
       setConnected(false);
       return;
     }
 
-    // Connect WebSocket
-    const connectWebSocket = () => {
-      try {
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//${window.location.hostname}:8000`;
-        
-        console.log('WebSocket connection disabled - not implemented on server yet');
-        return; // Temporarily disable WebSocket until server implements it
-        
-        wsRef.current = new WebSocket(wsUrl);
+    // Connect Socket.IO
+    console.log('🔌 Connecting to Socket.IO server...');
+    const socket = io('http://localhost:8000', {
+      autoConnect: true,
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 5
+    });
 
-        wsRef.current.onopen = () => {
-          console.log('WebSocket connected');
-          setConnected(true);
-          
-          // Send authentication
-          wsRef.current.send(JSON.stringify({
-            type: 'auth',
-            token: currentSession.token
-          }));
-        };
+    socketRef.current = socket;
 
-        wsRef.current.onmessage = (event) => {
-          try {
-            const data = JSON.parse(event.data);
-            setMessages(prev => [...prev, data]);
-          } catch (error) {
-            console.error('Failed to parse WebSocket message:', error);
-          }
-        };
+    // Connection event handlers
+    socket.on('connect', () => {
+      console.log('✅ Socket.IO connected:', socket.id);
+      setConnected(true);
+      
+      // Authenticate the socket connection
+      socket.emit('authenticate', currentSession.token);
+    });
 
-        wsRef.current.onerror = (error) => {
-          console.error('WebSocket error:', error);
-        };
-
-        wsRef.current.onclose = () => {
-          console.log('WebSocket disconnected');
-          setConnected(false);
-          
-          // Attempt to reconnect after 3 seconds
-          if (currentSession) {
-            reconnectTimeoutRef.current = setTimeout(() => {
-              console.log('Attempting to reconnect WebSocket...');
-              connectWebSocket();
-            }, 3000);
-          }
-        };
-      } catch (error) {
-        console.error('Failed to connect WebSocket:', error);
+    socket.on('authenticated', (data) => {
+      if (data.success) {
+        console.log('✅ Socket authenticated');
+      } else {
+        console.error('❌ Socket authentication failed:', data.error);
       }
-    };
+    });
 
-    connectWebSocket();
+    socket.on('disconnect', (reason) => {
+      console.log('🔌 Socket.IO disconnected:', reason);
+      setConnected(false);
+    });
 
-    // Cleanup on unmount
+    socket.on('connect_error', (error) => {
+      console.error('❌ Socket.IO connection error:', error);
+      setConnected(false);
+    });
+
+    socket.on('reconnect', (attemptNumber) => {
+      console.log('🔄 Socket.IO reconnected after', attemptNumber, 'attempts');
+    });
+
+    // Cleanup on unmount or session change
     return () => {
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-      }
-      if (wsRef.current) {
-        wsRef.current.close();
+      console.log('🔌 Cleaning up socket connection');
+      if (socket) {
+        socket.disconnect();
       }
     };
-  }, [currentSession]);
+  }, [currentSession?.token]);
 
-  const sendMessage = (message) => {
-    if (wsRef.current && connected) {
-      wsRef.current.send(JSON.stringify(message));
-      return true;
+  // Function to subscribe to events
+  const on = (event, handler) => {
+    if (socketRef.current) {
+      socketRef.current.on(event, handler);
+      
+      // Store handler reference for cleanup
+      if (!eventHandlersRef.current.has(event)) {
+        eventHandlersRef.current.set(event, []);
+      }
+      eventHandlersRef.current.get(event).push(handler);
     }
-    return false;
+  };
+
+  // Function to unsubscribe from events
+  const off = (event, handler) => {
+    if (socketRef.current) {
+      socketRef.current.off(event, handler);
+      
+      // Remove from stored handlers
+      const handlers = eventHandlersRef.current.get(event);
+      if (handlers) {
+        const index = handlers.indexOf(handler);
+        if (index > -1) {
+          handlers.splice(index, 1);
+        }
+      }
+    }
+  };
+
+  // Function to emit events
+  const emit = (event, data) => {
+    if (socketRef.current && connected) {
+      socketRef.current.emit(event, data);
+    } else {
+      console.warn('Cannot emit - socket not connected');
+    }
+  };
+
+  // Function to join a conversation room
+  const joinConversation = (conversationId) => {
+    if (socketRef.current && connected) {
+      console.log('📥 Joining conversation:', conversationId);
+      socketRef.current.emit('join-conversation', conversationId);
+    }
+  };
+
+  // Function to leave a conversation room
+  const leaveConversation = (conversationId) => {
+    if (socketRef.current && connected) {
+      console.log('📤 Leaving conversation:', conversationId);
+      socketRef.current.emit('leave-conversation', conversationId);
+    }
   };
 
   const value = {
     connected,
-    messages,
-    sendMessage
+    socket: socketRef.current,
+    on,
+    off,
+    emit,
+    joinConversation,
+    leaveConversation
   };
+
+  // Expose for debugging
+  if (typeof window !== 'undefined') {
+    window.__websocket__ = value;
+  }
 
   return (
     <WebSocketContext.Provider value={value}>

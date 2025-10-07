@@ -21,3 +21,12 @@ export const generateToken = (userId, username) => {
     { expiresIn: '24h' }
   );
 };
+
+// Verify JWT token
+export const verifyToken = (token) => {
+  try {
+    return jwt.verify(token, process.env.JWT_SECRET);
+  } catch (error) {
+    throw new Error('Invalid or expired token');
+  }
+};
