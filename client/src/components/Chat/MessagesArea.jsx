@@ -69,9 +69,10 @@ function MessagesArea({ discussion, messages = [], loading, error }) {
                     <Message
                         key={message.id}
                         text={message.content}
-                        isSent={message.sender_id === currentSession?.userId}
-                        time={new Date(message.sent_at).toLocaleTimeString()}
-                        avatarUrl={message.sender_id === currentSession?.userId ? '' : discussion?.avatarUrl}
+                        sender={message.sender}
+                        isSent={message.sender === currentSession?.username}
+                        time={new Date(message.timestamp).toLocaleString()}
+                        avatarUrl={message.sender === currentSession?.username ? '' : discussion?.avatarUrl}
                     />
                 ))
             )}

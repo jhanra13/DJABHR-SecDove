@@ -76,12 +76,27 @@
   flex-direction: column;
 }
 
+.message-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.message-sender {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--primary-blue-start);
+  padding: 0 var(--spacing-md);
+  margin-bottom: var(--spacing-xs);
+}
+
 .message-text {
   padding: var(--spacing-md);
   background-color: var(--message-received-bg);
   border-radius: var(--radius-md);
   font-size: 0.9rem;
   line-height: 1.4;
+  word-wrap: break-word;
 }
 
 .message.sent .message-text {
