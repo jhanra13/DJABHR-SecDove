@@ -6,31 +6,49 @@ import ChatWindow from '../Chat/ChatWindow';
 import ContactsView from '../Contacts/ContactsView';
 import SettingsView from '../Settings/SettingsView';
 import AddContactModal from '../Modals/AddContactModal';
+import NewConversationModal from '../Modals/NewConversationModal';
 import { useViewContext, VIEWS } from '../../context/ViewContext';
-import { useAuthContext } from '../../context/AuthContext';
-import { useMessages } from '../../hooks/useMessages';
+import { useAuth } from '../../context/AuthContext';
+import { useMessages } from '../../context/MessagesContext';
 
 function AppContainer() {
     const [activeDiscussion, setActiveDiscussion] = useState(null);
     const [showAddContact, setShowAddContact] = useState(false);
+    const [showNewConversation, setShowNewConversation] = useState(false);
     const { currentView } = useViewContext();
-    const { user } = useAuthContext();
+    const { currentSession } = useAuth();
     
-    // Only call useMessages when we have a valid active discussion
-    const activeContactId = activeDiscussion?.id || null;
-    const { messages, sendMessage, loading: messagesLoading, error: messagesError } = useMessages(activeContactId);
+    // Get messages context
+    const { getMessages, loadMessages, sendMessage, loading: messagesLoading, error: messagesError } = useMessages();
+    
+    // Get messages for the active discussion
+    const messages = activeDiscussion ? getMessages(activeDiscussion.id) : [];
+
+    // Load messages when conversation is selected
+    useEffect(() => {
+        if (activeDiscussion?.id) {
+            loadMessages(activeDiscussion.id);
+        }
+    }, [activeDiscussion?.id]);
 
     // Reset active discussion when user logs out
     useEffect(() => {
-        if (!user) {
+        if (!currentSession) {
             setActiveDiscussion(null);
             setShowAddContact(false);
+            setShowNewConversation(false);
         }
-    }, [user]);
+    }, [currentSession]);
+
+    // Handle new conversation created
+    const handleConversationCreated = (conversation) => {
+        // Automatically select the newly created conversation
+        setActiveDiscussion(conversation);
+    };
 
     const renderView = () => {
         switch(currentView) {
-            case VIEWS.MESSAGES:
+            case VIEWS.DISCUSSIONS:
                 return (
                     <>
                         <DiscussionsList
@@ -44,6 +62,7 @@ function AppContainer() {
                             sendMessage={sendMessage}
                             loading={messagesLoading}
                             error={messagesError}
+                            onNewConversation={() => setShowNewConversation(true)}
                         />
                     </>
                 );
@@ -76,6 +95,12 @@ function AppContainer() {
             <AddContactModal
                 isOpen={showAddContact}
                 onClose={() => setShowAddContact(false)}
+            />
+
+            <NewConversationModal
+                isOpen={showNewConversation}
+                onClose={() => setShowNewConversation(false)}
+                onConversationCreated={handleConversationCreated}
             />
         </>
     );

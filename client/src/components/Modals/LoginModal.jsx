@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import './LoginModal.css';
-import { useAuthContext } from '../../context/AuthContext';
-import { useWebSocketContext } from '../../context/WebSocketContext';
+import { useAuth } from '../../context/AuthContext';
 
 function LoginModal({ isOpen, onClose, onSwitchToRegister }) {
     const [formData, setFormData] = useState({
@@ -12,8 +11,7 @@ function LoginModal({ isOpen, onClose, onSwitchToRegister }) {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
-    const { login } = useAuthContext();
-    const { connect } = useWebSocketContext();
+    const { login } = useAuth();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -27,12 +25,23 @@ function LoginModal({ isOpen, onClose, onSwitchToRegister }) {
         }
 
         try {
-            const result = await login(formData.username, formData.password);
-            console.log('Login successful, result:', result);
+            await login(formData.username, formData.password);
+            // Clear form on success
+            setFormData({ username: '', password: '', rememberMe: false });
             onClose();
         } catch (err) {
-            console.error('Login error:', err);
-            setError(err.message || 'Login failed');
+            // Extract user-friendly error message
+            let errorMessage = 'Login failed';
+            
+            if (err.response?.status === 401) {
+                errorMessage = 'Invalid username or password';
+            } else if (err.response?.data?.error) {
+                errorMessage = err.response.data.error;
+            } else if (err.message) {
+                errorMessage = err.message;
+            }
+            
+            setError(errorMessage);
         } finally {
             setLoading(false);
         }
@@ -41,8 +50,8 @@ function LoginModal({ isOpen, onClose, onSwitchToRegister }) {
     if (!isOpen) return null;
 
     return (
-        <div className="modal-overlay" onClick={onClose}>
-            <div className="login-modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay">
+            <div className="login-modal-content">
                 <div className="login-logo">
                     <div className="logo-circle">SD</div>
                 </div>

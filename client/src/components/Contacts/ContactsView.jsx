@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { useContactsContext } from '../../context/ContactsContext';
-import { useAuthContext } from '../../context/AuthContext';
+import { useContacts } from '../../context/ContactsContext';
+import { useAuth } from '../../context/AuthContext';
 import './ContactsView.css';
 
 function ContactsView() {
-    const { contacts, loading, error, deleteContact, blockContact, addNewContact } = useContactsContext();
-    const { user } = useAuthContext();
+    const { contacts, loading, error, deleteContact, blockContact } = useContacts();
+    const { currentSession } = useAuth();
     const [showAddContact, setShowAddContact] = useState(false);
     const [newContactUsername, setNewContactUsername] = useState('');
 

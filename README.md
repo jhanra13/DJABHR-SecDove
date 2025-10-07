@@ -1,10 +1,24 @@
-# SecDove - Secure Messaging App
+# SecureDove - E2EE Messaging App
 
 A secure messaging application with end-to-end encryption (E2EE) built with React (client) and Node.js (server).
 
 ## Project Overview
 
-SecDove is a client-server messaging application that ensures private communication through end-to-end encryption. Messages are encrypted on the sender's device and can only be decrypted by the intended recipient.
+SecureDove is a zero-knowledge messaging application that ensures private communication through end-to-end encryption. Messages are encrypted on the sender's device and can only be decrypted by the intended recipient. The server never has access to plaintext messages or private keys.
+
+## Project Status
+
+### ✅ Completed
+- **Frontend UI**: React + Vite interface with chat components
+- **Backend Server**: Node.js + Express + SQLite (fully implemented)
+  - 17 API endpoints operational
+  - JWT authentication with bcrypt
+  - Complete database schema with indexes
+  - Rate limiting and security headers
+  - Comprehensive API documentation
+
+### 🚧 Next Phase
+- **Client-side Cryptography**: Implementing Web Crypto API for key generation and encryption
 
 ## Architecture
 
@@ -28,26 +42,38 @@ SecDove is a client-server messaging application that ensures private communicat
 
 ### Installation & Running
 
-1. Clone/download the project
-2. Install dependencies:
-   ```bash
-   # Server dependencies
-   cd server
-   npm install
-   
-   # Client dependencies  
-   cd ../client
-   npm install
-   ```
+#### Server Setup
+```bash
+# Navigate to server directory
+cd server
 
-3. Start both server and client:
-   ```bash
-   # From project root directory
-   start.bat  # Windows - or run manually below
-   ```
-   
-   Or manually:
-   ```bash
+# Install dependencies
+npm install
+
+# Initialize database
+npm run init-db
+
+# Start server
+npm run dev  # Development with auto-restart
+# OR
+npm start    # Production mode
+```
+
+Server runs at: `http://localhost:3000`
+
+#### Client Setup
+```bash
+# Navigate to client directory (in a new terminal)
+cd client
+
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+```
+
+Client runs at: `http://localhost:5173`
    # Terminal 1 - Server
    cd server
    npm start

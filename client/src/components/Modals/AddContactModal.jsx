@@ -1,12 +1,33 @@
 import { useState } from 'react';
 import './Modal.css';
-import { useContactsContext } from '../../context/ContactsContext';
+import { useContacts } from '../../context/ContactsContext';
+import { useAuth } from '../../context/AuthContext';
 
 function AddContactModal({ isOpen, onClose }) {
     const [username, setUsername] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
-    const { addNewContact } = useContactsContext();
+    const [checking, setChecking] = useState(false);
+    const { addContact } = useContacts();
+    const { checkUsernameExists } = useAuth();
+
+    // Check if username exists when field loses focus
+    const handleUsernameBlur = async () => {
+        if (!username.trim()) return;
+        
+        setChecking(true);
+        setError('');
+        try {
+            const exists = await checkUsernameExists(username.trim());
+            if (!exists) {
+                setError('User not found');
+            }
+        } catch (err) {
+            console.error('Username check error:', err);
+        } finally {
+            setChecking(false);
+        }
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -20,8 +41,8 @@ function AddContactModal({ isOpen, onClose }) {
         }
 
         try {
-            await addNewContact(username.trim());
-            setUsername('');
+            await addContact(username.trim());
+            setUsername(''); // Clear input on success
             onClose();
         } catch (err) {
             setError(err.message || 'Failed to add contact');
@@ -46,10 +67,12 @@ function AddContactModal({ isOpen, onClose }) {
                             id="contact-username"
                             value={username}
                             onChange={e => setUsername(e.target.value)}
+                            onBlur={handleUsernameBlur}
                             placeholder="Enter contact's username"
                             autoFocus
                             disabled={loading}
                         />
+                        {checking && <small>Checking user...</small>}
                     </div>
                     {error && <div className="status-message error">{error}</div>}
                     <button type="submit" className="modal-button" disabled={loading}>

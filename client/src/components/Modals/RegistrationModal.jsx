@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import './Modal.css';
-import { useAuthContext } from '../../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
 
 function RegistrationModal({ isOpen, onClose, onSwitchToLogin }) {
     const [formData, setFormData] = useState({
@@ -11,8 +11,28 @@ function RegistrationModal({ isOpen, onClose, onSwitchToLogin }) {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState('');
+    const [usernameChecking, setUsernameChecking] = useState(false);
 
-    const { register } = useAuthContext();
+    const { register, checkUsernameExists } = useAuth();
+
+    // Check username when field loses focus
+    const handleUsernameBlur = async () => {
+        if (!formData.username || formData.username.length < 3) return;
+        
+        setUsernameChecking(true);
+        try {
+            const exists = await checkUsernameExists(formData.username);
+            if (exists) {
+                setError('Username already exists');
+            } else {
+                setError('');
+            }
+        } catch (err) {
+            console.error('Username check error:', err);
+        } finally {
+            setUsernameChecking(false);
+        }
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -32,22 +52,35 @@ function RegistrationModal({ isOpen, onClose, onSwitchToLogin }) {
             return;
         }
 
+        if (formData.password.length < 8) {
+            setError('Password must be at least 8 characters');
+            setLoading(false);
+            return;
+        }
+
         try {
-            // Call registration API
             await register(formData.username, formData.password);
-
-            // Show success message
-            setSuccess('Account created successfully! Please log in.');
-
-            // Clear form
+            setSuccess('Account created successfully! Logging in...');
             setFormData({ username: '', password: '', confirmPassword: '' });
-
-            // Switch to login after 2 seconds
+            
             setTimeout(() => {
-                onSwitchToLogin();
-            }, 2000);
+                onClose();
+            }, 1000);
         } catch (err) {
-            setError(err.message || 'Registration failed. Username may already exist.');
+            // Extract user-friendly error message
+            let errorMessage = 'Registration failed';
+            
+            if (err.response?.status === 409) {
+                errorMessage = 'Username already exists';
+            } else if (err.response?.status === 400) {
+                errorMessage = err.response.data?.error || 'Invalid registration data';
+            } else if (err.response?.data?.error) {
+                errorMessage = err.response.data.error;
+            } else if (err.message) {
+                errorMessage = err.message;
+            }
+            
+            setError(errorMessage);
         } finally {
             setLoading(false);
         }
@@ -56,8 +89,8 @@ function RegistrationModal({ isOpen, onClose, onSwitchToLogin }) {
     if (!isOpen) return null;
 
     return (
-        <div className="modal-overlay" onClick={onClose}>
-            <div className="modal-content" onClick={e => e.stopPropagation()}>
+        <div className="modal-overlay">
+            <div className="modal-content">
                 <div className="modal-header">
                     <h2 className="modal-title">Create Account</h2>
                 </div>
@@ -69,9 +102,11 @@ function RegistrationModal({ isOpen, onClose, onSwitchToLogin }) {
                             id="username"
                             value={formData.username}
                             onChange={e => setFormData({...formData, username: e.target.value})}
+                            onBlur={handleUsernameBlur}
                             placeholder="Choose a username"
                             disabled={loading}
                         />
+                        {usernameChecking && <small>Checking availability...</small>}
                     </div>
                     <div className="form-group">
                         <label htmlFor="password">Password</label>

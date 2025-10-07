@@ -1,17 +1,17 @@
 import { useState } from 'react';
 import './SettingsView.css';
 import BackupModal from '../Modals/BackupModal';
-import { useAuthContext } from '../../context/AuthContext';
-import { getStorageStats } from '../../utils/messageStorage';
+import { useAuth } from '../../context/AuthContext';
+import { getStorageInfo } from '../../utils/messageStorage';
 
 function SettingsView() {
     const [showBackupModal, setShowBackupModal] = useState(false);
     const [stats, setStats] = useState(null);
-    const { user } = useAuthContext();
+    const { currentSession } = useAuth();
 
     const loadStats = async () => {
-        if (user) {
-            const storageStats = await getStorageStats(user.id);
+        if (currentSession) {
+            const storageStats = await getStorageInfo();
             setStats(storageStats);
         }
     };
@@ -19,7 +19,7 @@ function SettingsView() {
     // Load stats when component mounts
     useState(() => {
         loadStats();
-    }, [user]);
+    }, [currentSession]);
 
     return (
         <div className="settings-view">

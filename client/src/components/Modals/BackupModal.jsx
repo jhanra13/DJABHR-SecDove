@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import './BackupModal.css';
-import { createBackup, restoreBackup, exportBackupToFile, importBackupFromFile, getBackupInfo } from '../../utils/messageBackup';
-import { getStorageStats, clearAllMessagesForUser } from '../../utils/messageStorage';
+import { createBackup, restoreBackup, exportBackup, importBackup, createAndExportBackup, importAndRestoreBackup } from '../../utils/messageBackup';
+import { getStorageInfo, clearAllMessages } from '../../utils/messageStorage';
 
 function BackupModal({ isOpen, onClose, userId }) {
     const [activeTab, setActiveTab] = useState('backup'); // 'backup' or 'restore'
@@ -23,7 +23,7 @@ function BackupModal({ isOpen, onClose, userId }) {
 
     const loadStats = async () => {
         try {
-            const storageStats = await getStorageStats(userId);
+            const storageStats = await getStorageInfo();
             setStats(storageStats);
         } catch (err) {
             console.error('Failed to load stats:', err);
@@ -50,18 +50,14 @@ function BackupModal({ isOpen, onClose, userId }) {
 
         try {
             // Create encrypted backup
-            const backupPackage = await createBackup(userId, pin);
+            const backupPackage = await createBackup();
 
             // Export to file
-            const exported = exportBackupToFile(backupPackage, userId);
+            exportBackup(backupPackage);
 
-            if (exported) {
-                setSuccess(`Backup created successfully! ${backupPackage.messageCount} messages backed up.`);
-                setPin('');
-                setConfirmPin('');
-            } else {
-                setError('Failed to export backup file');
-            }
+            setSuccess(`Backup created successfully!`);
+            setPin('');
+            setConfirmPin('');
         } catch (err) {
             console.error('Backup failed:', err);
             setError(err.message || 'Failed to create backup');
@@ -79,12 +75,18 @@ function BackupModal({ isOpen, onClose, userId }) {
         setBackupInfo(null);
 
         try {
-            const backupPackage = await importBackupFromFile(file);
+            const backupPackage = await importBackup(file);
             setBackupFile(backupPackage);
             
             // Show backup info
-            const info = getBackupInfo(backupPackage);
-            setBackupInfo(info);
+            const messageCount = Object.keys(backupPackage.messages || {}).reduce((total, convId) => {
+                return total + (backupPackage.messages[convId]?.length || 0);
+            }, 0);
+            setBackupInfo({
+                timestamp: backupPackage.timestamp,
+                messageCount,
+                version: backupPackage.version
+            });
             
             setSuccess('Backup file loaded successfully');
         } catch (err) {
@@ -116,27 +118,23 @@ function BackupModal({ isOpen, onClose, userId }) {
         setLoading(true);
 
         try {
-            const result = await restoreBackup(backupFile, pin, userId);
+            await restoreBackup(backupFile, false);
 
-            if (result.success) {
-                setSuccess(`Restored ${result.restoredCount} messages successfully!`);
-                setPin('');
-                setBackupFile(null);
-                setBackupInfo(null);
-                
-                // Reload stats
-                await loadStats();
+            setSuccess(`Backup restored successfully!`);
+            setPin('');
+            setBackupFile(null);
+            setBackupInfo(null);
+            
+            // Reload stats
+            await loadStats();
 
-                // Notify parent to refresh messages
-                setTimeout(() => {
-                    window.location.reload();
-                }, 2000);
-            } else {
-                setError('Failed to restore messages');
-            }
+            // Notify parent to refresh messages
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
         } catch (err) {
             console.error('Restore failed:', err);
-            setError(err.message || 'Failed to restore backup - check your PIN');
+            setError(err.message || 'Failed to restore backup');
         } finally {
             setLoading(false);
         }
@@ -156,8 +154,8 @@ function BackupModal({ isOpen, onClose, userId }) {
         setSuccess('');
 
         try {
-            const deletedCount = await clearAllMessagesForUser(userId);
-            setSuccess(`Deleted ${deletedCount} messages`);
+            clearAllMessages();
+            setSuccess(`All messages deleted`);
             await loadStats();
         } catch (err) {
             console.error('Failed to clear messages:', err);

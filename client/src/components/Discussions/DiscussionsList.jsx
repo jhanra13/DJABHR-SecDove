@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import './DiscussionsList.css';
 import SearchBar from './SearchBar';
 import DiscussionItem from './DiscussionItem';
-import { useConversations } from '../../hooks/useConversations';
+import { useConversations } from '../../context/ConversationsContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUserPlus } from '@fortawesome/free-solid-svg-icons';
 

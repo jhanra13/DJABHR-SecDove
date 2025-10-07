@@ -1,10 +1,10 @@
 import { useEffect, useRef } from 'react';
 import Message from './Message';
-import { useAuthContext } from '../../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
 
-function MessagesArea({ discussion, messages, loading, error }) {
+function MessagesArea({ discussion, messages = [], loading, error }) {
     const messagesEndRef = useRef(null);
-    const { user } = useAuthContext();
+    const { currentSession } = useAuth();
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -13,6 +13,9 @@ function MessagesArea({ discussion, messages, loading, error }) {
     useEffect(() => {
         scrollToBottom();
     }, [messages]);
+
+    // Ensure messages is always an array
+    const messageList = Array.isArray(messages) ? messages : [];
 
     if (loading) {
         return (
@@ -50,7 +53,7 @@ function MessagesArea({ discussion, messages, loading, error }) {
 
     return (
         <div className="messages-area">
-            {messages.length === 0 ? (
+            {messageList.length === 0 ? (
                 <div style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -62,13 +65,13 @@ function MessagesArea({ discussion, messages, loading, error }) {
                     No messages yet. Start a conversation!
                 </div>
             ) : (
-                messages.map(message => (
+                messageList.map(message => (
                     <Message
                         key={message.id}
                         text={message.content}
-                        isSent={message.sender_id === user?.id}
+                        isSent={message.sender_id === currentSession?.userId}
                         time={new Date(message.sent_at).toLocaleTimeString()}
-                        avatarUrl={message.sender_id === user?.id ? '' : discussion?.avatarUrl}
+                        avatarUrl={message.sender_id === currentSession?.userId ? '' : discussion?.avatarUrl}
                     />
                 ))
             )}

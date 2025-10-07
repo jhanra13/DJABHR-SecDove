@@ -1,61 +1,39 @@
 import { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPaperPlane, faSmile } from '@fortawesome/free-solid-svg-icons';
-import { useWebSocketContext } from '../../context/WebSocketContext';
-import { useAuthContext } from '../../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
+import { useMessages } from '../../context/MessagesContext';
 
-function ChatFooter({ recipient, discussion, sendMessage }) {
+function ChatFooter({ conversationId }) {
     const [message, setMessage] = useState('');
-    const { isConnected } = useWebSocketContext();
-    const { user } = useAuthContext();
+    const [sending, setSending] = useState(false);
+    const { currentSession } = useAuth();
+    const { sendMessage } = useMessages();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        console.log('handleSubmit called with message:', message);
+        if (!message.trim() || sending) return;
 
-        if (!message.trim()) {
-            console.log('Message is empty, returning');
+        if (!currentSession) {
+            alert('Please log in first');
             return;
         }
 
-        console.log('isConnected:', isConnected, 'discussion:', !!discussion, 'discussion.id:', discussion?.id, 'public_key:', !!discussion?.public_key);
-
-        if (!isConnected) {
-            alert('Not connected to server. Please log in first.');
-            return;
-        }
-
-        if (!discussion) {
+        if (!conversationId) {
             alert('Please select a conversation');
             return;
         }
 
-        if (!discussion.id) {
-            alert('Invalid conversation - no contact ID');
-            return;
-        }
-
-        if (!discussion.public_key) {
-            alert('Contact public key not found. Cannot send encrypted message.');
-            return;
-        }
-
-        console.log('ChatFooter - Sending message:', {
-            sender: user?.username,
-            recipient: discussion.name,
-            messageLength: message.trim().length,
-            hasSendMessage: !!sendMessage,
-            discussionId: discussion.id,
-            publicKeyLength: discussion.public_key?.length
-        });
-
+        setSending(true);
         try {
-            await sendMessage(message.trim(), discussion.public_key);
-            setMessage('');
+            await sendMessage(conversationId, message.trim());
+            setMessage(''); // Clear input on success
         } catch (error) {
             console.error('Failed to send message:', error);
             alert('Failed to send message: ' + error.message);
+        } finally {
+            setSending(false);
         }
     };
 
@@ -74,13 +52,13 @@ function ChatFooter({ recipient, discussion, sendMessage }) {
             <input
                 type="text"
                 className="message-input"
-                placeholder={isConnected ? "Type your message..." : "Connect to send messages"}
+                placeholder={currentSession ? "Type your message..." : "Please log in"}
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 onKeyPress={handleKeyPress}
-                disabled={!isConnected}
+                disabled={!currentSession || sending}
             />
-            <button type="submit" className="send-button" disabled={!isConnected || !message.trim()}>
+            <button type="submit" className="send-button" disabled={!currentSession || !message.trim() || sending}>
                 <FontAwesomeIcon icon={faPaperPlane} />
             </button>
         </form>
