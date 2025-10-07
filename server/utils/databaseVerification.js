@@ -256,8 +256,7 @@ export async function initializeDatabase() {
           encrypted_msg_content TEXT NOT NULL,
           created_at INTEGER NOT NULL,
           updated_at INTEGER,
-          is_deleted INTEGER DEFAULT 0,
-          FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
+          is_deleted INTEGER DEFAULT 0
         )
       `);
 
