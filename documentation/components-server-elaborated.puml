@@ -1,0 +1,130 @@
+@startuml
+title Server Component Design – Elaborated
+
+skinparam componentStyle rectangle
+
+package "HTTP Layer (Express)" {
+  class AuthRoutes <<component>> {
+    -- Endpoints --
+    + POST /api/auth/register
+    + POST /api/auth/login
+    + GET /api/auth/user
+    + POST /api/auth/logout
+    + GET /api/auth/check-username/:username
+  }
+
+  class ContactsRoutes <<component>> {
+    -- Endpoints --
+    + POST /api/contacts
+    + GET /api/contacts
+    + DELETE /api/contacts/:contactId
+    + GET /api/contacts/:username/public-key
+  }
+
+  class ConversationsRoutes <<component>> {
+    -- Endpoints --
+    + POST /api/conversations
+    + GET /api/conversations
+    + GET /api/conversations/:id
+    + POST /api/conversations/:id/participants
+    + DELETE /api/conversations/:id
+  }
+
+  class MessagesRoutes <<component>> {
+    -- Endpoints --
+    + POST /api/messages
+    + GET /api/messages/:conversationId
+    + PUT /api/messages/:messageId
+    + DELETE /api/messages/:messageId
+    + GET /api/messages/recent/all
+  }
+}
+
+package "Security & Middleware" {
+  class AuthMiddleware <<component>> {
+    -- Operations --
+    + authenticateToken(req,res,next)
+  }
+  class RateLimiter <<component>> {
+    -- Operations --
+    + apiLimiter
+    + loginLimiter
+  }
+  class AuthService <<service>> {
+    -- Operations --
+    + hashPassword(plain): hash
+    + verifyPassword(plain, hash): boolean
+    + generateToken(userId, username): jwt
+    + verifyToken(token): payload
+  }
+}
+
+package "Realtime" {
+  class RealtimeGateway <<component>> {
+    -- Events --
+    + on('authenticate')
+    + on('join-conversation')
+    + on('leave-conversation')
+    -- Emits --
+    + 'new-message'
+    + 'message-updated'
+    + 'message-deleted'
+    + 'conversation-created'
+    + 'conversation-updated'
+    + 'conversation-participants-added'
+    + 'conversation-participants-removed'
+    + 'conversation-key-rotated'
+  }
+}
+
+package "Persistence" {
+  class Database <<component>> {
+    -- Tables --
+    + users, contacts, conversations, messages, conversation_events
+    -- Operations --
+    + run(sql, params): {id, changes}
+    + get(sql, params): row
+    + all(sql, params): rows
+  }
+  class DBVerifyService <<service>> {
+    -- Operations --
+    + ensureDatabaseIntegrity()
+  }
+}
+
+package "Config" {
+  class EnvConfig <<component>> {
+    -- Operations --
+    + getEnv(key, default): string
+  }
+}
+
+AuthRoutes ..> AuthMiddleware
+ContactsRoutes ..> AuthMiddleware
+ConversationsRoutes ..> AuthMiddleware
+MessagesRoutes ..> AuthMiddleware
+
+AuthRoutes ..> RateLimiter
+MessagesRoutes ..> RealtimeGateway : emit
+ConversationsRoutes ..> RealtimeGateway : emit
+
+AuthRoutes ..> AuthService
+AuthRoutes ..> Database
+ContactsRoutes ..> Database
+ConversationsRoutes ..> Database
+MessagesRoutes ..> Database
+
+DBVerifyService ..> Database
+EnvConfig ..> AuthRoutes
+EnvConfig ..> ContactsRoutes
+EnvConfig ..> ConversationsRoutes
+EnvConfig ..> MessagesRoutes
+EnvConfig ..> RealtimeGateway
+EnvConfig ..> Database
+
+note bottom
+Patterns: Layered architecture with routing/controllers, middleware for cross-cutting concerns, and a persistence layer. Realtime via Socket.IO.
+end note
+
+@enduml
+

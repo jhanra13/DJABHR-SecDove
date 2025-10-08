@@ -1,0 +1,71 @@
+@startuml
+title SecureDove Architecture – Brief Component View
+
+skinparam componentStyle rectangle
+
+package "Client (React)" {
+  [UI]
+  [AuthContext]
+  [ContactsContext]
+  [ConversationsContext]
+  [MessagesContext]
+  [WebSocketContext]
+  [ViewContext]
+
+  [AuthAPI]
+  [ContactsAPI]
+  [ConversationsAPI]
+  [MessagesAPI]
+}
+
+package "Server (Express + Socket.IO)" {
+  [AuthRoutes]
+  [ContactsRoutes]
+  [ConversationsRoutes]
+  [MessagesRoutes]
+  [AuthMiddleware]
+  [RateLimiter]
+  [RealtimeGateway]
+  database "SQLite DB" as SQLite
+}
+
+UI --> AuthContext
+UI --> ContactsContext
+UI --> ConversationsContext
+UI --> MessagesContext
+UI --> ViewContext
+UI --> WebSocketContext
+
+AuthContext --> AuthAPI
+ContactsContext --> ContactsAPI
+ConversationsContext --> ConversationsAPI
+ConversationsContext --> ContactsAPI
+MessagesContext --> MessagesAPI
+MessagesContext --> WebSocketContext
+
+AuthAPI ..> AuthRoutes : REST
+ContactsAPI ..> ContactsRoutes : REST
+ConversationsAPI ..> ConversationsRoutes : REST
+MessagesAPI ..> MessagesRoutes : REST
+
+AuthRoutes --> AuthMiddleware
+AuthRoutes --> RateLimiter
+ContactsRoutes --> AuthMiddleware
+ConversationsRoutes --> AuthMiddleware
+MessagesRoutes --> AuthMiddleware
+
+AuthRoutes --> SQLite
+ContactsRoutes --> SQLite
+ConversationsRoutes --> SQLite
+MessagesRoutes --> SQLite
+MessagesRoutes ..> RealtimeGateway : emit events
+ConversationsRoutes ..> RealtimeGateway : emit events
+
+WebSocketContext ..> RealtimeGateway : Socket.IO
+
+note bottom
+Patterns: Client–Server, Layered. Server uses modular routing (Controller-like routes + Middleware) with a persistence layer. Client uses Context/Provider pattern with Hooks.
+end note
+
+@enduml
+
