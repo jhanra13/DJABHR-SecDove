@@ -23,7 +23,7 @@ function AppContainer() {
     const [participantLoading, setParticipantLoading] = useState(false);
     const { currentView } = useViewContext();
     const { currentSession } = useAuth();
-    const { conversations, addParticipants, leaveConversation } = useConversations();
+    const { addParticipants, leaveConversation } = useConversations();
     
     // Get messages context
     const { getMessages, loadMessages, sendMessage, clearMessages, loading: messagesLoading, error: messagesError } = useMessages();
@@ -36,18 +36,7 @@ function AppContainer() {
         if (activeDiscussion?.id) {
             loadMessages(activeDiscussion.id);
         }
-    }, [activeDiscussion?.id, loadMessages]);
-
-    // Keep the active discussion in sync with latest participant metadata
-    useEffect(() => {
-        if (!activeDiscussion?.id) return;
-        const updated = conversations.find(convo => convo.id === activeDiscussion.id);
-        if (updated && updated !== activeDiscussion) {
-            setActiveDiscussion(updated);
-        } else if (!updated) {
-            setActiveDiscussion(null);
-        }
-    }, [conversations, activeDiscussion, activeDiscussion?.id]);
+    }, [activeDiscussion?.id]);
 
     // Reset active discussion when user logs out
     useEffect(() => {
