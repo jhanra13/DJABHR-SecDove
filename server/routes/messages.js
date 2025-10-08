@@ -96,32 +96,8 @@ router.get('/:conversationId', authenticateToken, async (req, res) => {
        WHERE conversation_id = ? AND is_deleted = 0
        ORDER BY created_at ASC
        LIMIT ? OFFSET ?`,
-      [conversationId, parseInt(limit), parseInt(offset)]
+      [conversationId, parseInt(limit, 10), parseInt(offset, 10)]
     );
-
-    const events = await all(
-      `SELECT id, type, actor_username, details, created_at
-       FROM conversation_events
-       WHERE conversation_id = ?
-       ORDER BY created_at ASC`,
-      [conversationId]
-    );
-
-    const combined = [
-      ...messages,
-      ...events.map(event => ({
-        id: `event-${event.id}`,
-        conversation_id: parseInt(conversationId, 10),
-        content_key_number: null,
-        encrypted_msg_content: null,
-        sender_username: event.actor_username,
-        created_at: event.created_at,
-        updated_at: event.created_at,
-        is_deleted: 0,
-        event_type: event.type,
-        event_details: event.details
-      }))
-    ].sort((a, b) => a.created_at - b.created_at);
 
     // Get total count
     const countResult = await get(
@@ -130,11 +106,11 @@ router.get('/:conversationId', authenticateToken, async (req, res) => {
     );
 
     res.json({
-      messages: combined,
+      messages,
       pagination: {
         total: countResult.total,
-        limit: parseInt(limit),
-        offset: parseInt(offset)
+        limit: parseInt(limit, 10),
+        offset: parseInt(offset, 10)
       }
     });
   } catch (error) {

@@ -5,7 +5,8 @@ import {
   generateContentKey,
   encryptContentKey,
   decryptContentKey,
-  importPublicKey
+  importPublicKey,
+  encryptMessage
 } from '../utils/crypto';
 import { useWebSocket } from './WebSocketContext';
 
@@ -240,18 +241,74 @@ export const ConversationsProvider = ({ children }) => {
     return null;
   };
 
-  const leaveConversation = async (conversationId) => {
+  const buildBroadcastEnvelope = async ({
+    key,
+    keyNumber,
+    actor,
+    usernames,
+    shareHistory,
+    type = 'participant-added'
+  }) => {
+    if (!key || typeof keyNumber !== 'number') {
+      throw new Error('Missing content key for broadcast message');
+    }
+
+    const timestamp = Date.now();
+    const messageObj = {
+      sender: actor,
+      timestamp,
+      content: '',
+      broadcast: {
+        type,
+        actor,
+        usernames,
+        shareHistory: Boolean(shareHistory)
+      }
+    };
+
+    const encrypted_msg_content = await encryptMessage(messageObj, key);
+    return {
+      encrypted_msg_content,
+      content_key_number: keyNumber
+    };
+  };
+
+  const removeConversationLocally = useCallback((conversationId) => {
+    setConversations(prev => prev.filter(convo => convo.id !== conversationId));
+    setContentKeyCache(prev => {
+      const copy = { ...prev };
+      delete copy[conversationId];
+      return copy;
+    });
+  }, [setConversations, setContentKeyCache]);
+
+  const performConversationRemoval = async (conversationId) => {
     if (!currentSession) throw new Error('Not authenticated');
+    const keyInfo = getContentKey(conversationId);
+    if (!keyInfo) throw new Error('No content key for conversation');
+
+    const systemBroadcast = await buildBroadcastEnvelope({
+      key: keyInfo.key,
+      keyNumber: keyInfo.keyNumber,
+      actor: currentSession.username,
+      usernames: [currentSession.username],
+      shareHistory: false,
+      type: 'participant-removed'
+    });
+
+    await conversationsAPI.deleteConversation(conversationId, {
+      system_broadcast: systemBroadcast
+    });
+
+    removeConversationLocally(conversationId);
+
+    return { success: true };
+  };
+
+  const leaveConversation = async (conversationId) => {
     setError(null);
     try {
-      await conversationsAPI.deleteConversation(conversationId);
-      setConversations(prev => prev.filter(convo => convo.id !== conversationId));
-      setContentKeyCache(prev => {
-        const copy = { ...prev };
-        delete copy[conversationId];
-        return copy;
-      });
-      return { success: true };
+      return await performConversationRemoval(conversationId);
     } catch (err) {
       const errorMsg = err.response?.data?.error || err.message;
       setError(errorMsg);
@@ -268,6 +325,8 @@ export const ConversationsProvider = ({ children }) => {
     if (!currentSession?.privateKey) throw new Error('Not authenticated');
 
     setError(null);
+
+    let previousEntrySnapshot = null;
 
     try {
       const targetConversation = conversations.find(c => c.id === conversationId);
@@ -296,9 +355,24 @@ export const ConversationsProvider = ({ children }) => {
           })
         );
 
+        const existingKey = getContentKey(conversationId, targetConversation.content_key_number);
+        if (!existingKey) {
+          throw new Error('Unable to locate conversation key for broadcast message');
+        }
+
+        const systemBroadcast = await buildBroadcastEnvelope({
+          key: existingKey.key,
+          keyNumber: existingKey.keyNumber,
+          actor: currentSession.username,
+          usernames: uniqueNewUsers,
+          shareHistory: true,
+          type: 'participant-added'
+        });
+
         await conversationsAPI.addParticipants(conversationId, {
           share_history: true,
-          entries
+          entries,
+          system_broadcast: systemBroadcast
         });
 
         setConversations(prev => prev.map(convo =>
@@ -320,6 +394,28 @@ export const ConversationsProvider = ({ children }) => {
       const newKeyNumber = latestNumber + 1;
       const newContentKey = await generateContentKey();
 
+      previousEntrySnapshot = cacheEntry
+        ? {
+            latest: cacheEntry.latest,
+            keys: { ...cacheEntry.keys }
+          }
+        : null;
+
+      // Optimistically expose new key so realtime broadcast decrypts instantly
+      setContentKeyCache(prev => {
+        const existing = prev[conversationId] || { latest: 0, keys: {} };
+        return {
+          ...prev,
+          [conversationId]: {
+            latest: newKeyNumber,
+            keys: {
+              ...existing.keys,
+              [newKeyNumber]: newContentKey
+            }
+          }
+        };
+      });
+
       const participantSet = new Set([...(targetConversation.participants || []), ...uniqueNewUsers]);
       const entries = [];
 
@@ -330,10 +426,20 @@ export const ConversationsProvider = ({ children }) => {
         entries.push({ username: participant, encrypted_content_key: encryptedContentKey });
       }
 
+      const systemBroadcast = await buildBroadcastEnvelope({
+        key: newContentKey,
+        keyNumber: newKeyNumber,
+        actor: currentSession.username,
+        usernames: uniqueNewUsers,
+        shareHistory: false,
+        type: 'participant-added'
+      });
+
       await conversationsAPI.addParticipants(conversationId, {
         share_history: false,
         content_key_number: newKeyNumber,
-        entries
+        entries,
+        system_broadcast: systemBroadcast
       });
 
       setContentKeyCache(prev => {
@@ -364,6 +470,19 @@ export const ConversationsProvider = ({ children }) => {
       await loadConversations();
       return { success: true };
     } catch (err) {
+      if (!shareHistory) {
+        setContentKeyCache(prev => {
+          if (previousEntrySnapshot) {
+            return {
+              ...prev,
+              [conversationId]: previousEntrySnapshot
+            };
+          }
+          const copy = { ...prev };
+          delete copy[conversationId];
+          return copy;
+        });
+      }
       const errorMsg = err.response?.data?.error || err.message;
       setError(errorMsg);
       throw new Error(errorMsg);
@@ -372,24 +491,9 @@ export const ConversationsProvider = ({ children }) => {
 
   // Delete conversation
   const deleteConversation = async (conversationId) => {
-    if (!currentSession) throw new Error('Not authenticated');
-    
     setError(null);
-    
     try {
-      await conversationsAPI.deleteConversation(conversationId);
-      
-      // Remove from local state
-      setConversations(prev => prev.filter(c => c.id !== conversationId));
-      
-      // Remove from cache
-      setContentKeyCache(prev => {
-        const newCache = { ...prev };
-        delete newCache[conversationId];
-        return newCache;
-      });
-      
-      return { success: true };
+      return await performConversationRemoval(conversationId);
     } catch (err) {
       const errorMsg = err.response?.data?.error || err.message;
       setError(errorMsg);

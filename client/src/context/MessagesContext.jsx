@@ -34,17 +34,63 @@ const describeEvent = ({ type, actor, usernames = [], shareHistory }) => {
   }
 };
 
-const buildSystemMessage = ({ conversationId, type, actor, usernames, shareHistory, timestamp }) => ({
-  id: `system-${conversationId}-${type}-${timestamp}-${Math.random().toString(36).slice(2, 8)}`,
+const buildBroadcastMessage = ({
+  id,
   conversationId,
-  contentKeyNumber: null,
-  sender: 'System',
-  content: describeEvent({ type, actor, usernames, shareHistory }),
+  contentKeyNumber,
+  broadcast,
   timestamp,
-  created_at: timestamp,
-  updated_at: timestamp,
-  system: true
+  createdAt,
+  updatedAt,
+  fallbackContent
+}) => ({
+  id,
+  conversationId,
+  contentKeyNumber,
+  sender: 'System',
+  content: describeEvent({
+    type: broadcast?.type,
+    actor: broadcast?.actor,
+    usernames: broadcast?.usernames,
+    shareHistory: broadcast?.shareHistory
+  }) || fallbackContent || '',
+  timestamp,
+  created_at: createdAt,
+  updated_at: updatedAt,
+  system: true,
+  broadcast
 });
+
+const normalizeDecryptedMessage = (messageData, decrypted) => {
+  const createdAt = messageData.created_at ?? decrypted?.timestamp ?? Date.now();
+  const updatedAt = messageData.updated_at ?? decrypted?.edited_timestamp ?? null;
+  const timestamp = decrypted?.timestamp ?? createdAt;
+
+  if (decrypted?.broadcast?.type) {
+    return buildBroadcastMessage({
+      id: messageData.id,
+      conversationId: messageData.conversation_id,
+      contentKeyNumber: messageData.content_key_number,
+      broadcast: decrypted.broadcast,
+      timestamp,
+      createdAt,
+      updatedAt,
+      fallbackContent: decrypted.content
+    });
+  }
+
+  return {
+    id: messageData.id,
+    conversationId: messageData.conversation_id,
+    contentKeyNumber: messageData.content_key_number,
+    sender: decrypted.sender,
+    content: decrypted.content,
+    timestamp,
+    created_at: createdAt,
+    updated_at: updatedAt,
+    edited: Boolean(decrypted.edited) || Boolean(updatedAt)
+  };
+};
 
 export const MessagesProvider = ({ children }) => {
   const { currentSession } = useAuth();
@@ -71,48 +117,22 @@ export const MessagesProvider = ({ children }) => {
     if (!keyData) return;
     try {
       const decrypted = await decryptMessage(messageData.encrypted_msg_content, keyData.key);
-      appendMessage(messageData.conversation_id, {
-        id: messageData.id,
-        conversationId: messageData.conversation_id,
-        contentKeyNumber: messageData.content_key_number,
-        sender: decrypted.sender,
-        content: decrypted.content,
-        timestamp: decrypted.timestamp,
-        created_at: messageData.created_at,
-        updated_at: messageData.updated_at,
-        edited: Boolean(decrypted.edited) || Boolean(messageData.updated_at)
-      });
+      const normalized = normalizeDecryptedMessage(messageData, decrypted);
+      appendMessage(messageData.conversation_id, normalized);
     } catch {
       /* ignore decryption errors */
     }
   }, [appendMessage, getContentKey]);
-
-  const handleSystemNotice = useCallback((notice) => {
-    const {
-      conversation_id,
-      type,
-      actor,
-      usernames = [],
-      share_history,
-      timestamp = Date.now()
-    } = notice || {};
-    if (!conversation_id) return;
-
-    appendMessage(conversation_id, buildSystemMessage({
-      conversationId: conversation_id,
-      type,
-      actor,
-      usernames,
-      shareHistory: share_history,
-      timestamp
-    }));
-  }, [appendMessage]);
 
   const handleMessageUpdated = useCallback(async (messageData) => {
     const keyData = getContentKey(messageData.conversation_id, messageData.content_key_number);
     if (!keyData) return;
     try {
       const decrypted = await decryptMessage(messageData.encrypted_msg_content, keyData.key);
+      if (decrypted?.broadcast?.type) {
+        appendMessage(messageData.conversation_id, normalizeDecryptedMessage(messageData, decrypted));
+        return;
+      }
       setMessages(prev => ({
         ...prev,
         [messageData.conversation_id]: (prev[messageData.conversation_id] || []).map(msg =>
@@ -143,14 +163,12 @@ export const MessagesProvider = ({ children }) => {
     on('new-message', handleRealtimeMessage);
     on('message-updated', handleMessageUpdated);
     on('message-deleted', handleMessageDeleted);
-    on('conversation-system-message', handleSystemNotice);
     return () => {
       off('new-message', handleRealtimeMessage);
       off('message-updated', handleMessageUpdated);
       off('message-deleted', handleMessageDeleted);
-      off('conversation-system-message', handleSystemNotice);
     };
-  }, [connected, on, off, handleRealtimeMessage, handleMessageUpdated, handleMessageDeleted, handleSystemNotice]);
+  }, [connected, on, off, handleRealtimeMessage, handleMessageUpdated, handleMessageDeleted]);
 
   useEffect(() => {
     if (connected && activeConversation) joinConversation(activeConversation);
@@ -174,13 +192,20 @@ export const MessagesProvider = ({ children }) => {
             } catch {
               details = {};
             }
-            return buildSystemMessage({
+            return buildBroadcastMessage({
+              id: msg.id,
               conversationId: msg.conversation_id,
-              type: msg.event_type,
-              actor: msg.sender_username,
-              usernames: details.usernames || [],
-              shareHistory: details.share_history,
-              timestamp: msg.created_at
+              contentKeyNumber: msg.content_key_number,
+              broadcast: {
+                type: msg.event_type,
+                actor: msg.sender_username,
+                usernames: details.usernames || [],
+                shareHistory: details.share_history
+              },
+              timestamp: msg.created_at,
+              createdAt: msg.created_at,
+              updatedAt: msg.updated_at,
+              fallbackContent: null
             });
           }
 
@@ -188,17 +213,7 @@ export const MessagesProvider = ({ children }) => {
             const keyEntry = getContentKey(conversationId, msg.content_key_number);
             if (!keyEntry) return null;
             const payload = await decryptMessage(msg.encrypted_msg_content, keyEntry.key);
-            return {
-              id: msg.id,
-              conversationId: msg.conversation_id,
-              contentKeyNumber: msg.content_key_number,
-              sender: payload.sender,
-              content: payload.content,
-              timestamp: payload.timestamp,
-              created_at: msg.created_at,
-              updated_at: msg.updated_at,
-              edited: Boolean(payload.edited) || Boolean(msg.updated_at)
-            };
+            return normalizeDecryptedMessage(msg, payload);
           } catch {
             return null;
           }

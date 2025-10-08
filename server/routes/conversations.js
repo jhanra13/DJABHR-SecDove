@@ -52,15 +52,6 @@ router.post('/', authenticateToken, async (req, res) => {
       content_key_number: contentKeyNumber,
       initiated_by: currentUsername
     });
-    if (io) {
-      io.to(`conversation:${conversationId}`).emit('conversation-system-message', {
-        conversation_id: conversationId,
-        type: 'conversation-created',
-        actor: currentUsername,
-        usernames: participantUsernames.filter(u => u !== currentUsername),
-        timestamp
-      });
-    }
 
     await run(
       `INSERT INTO conversation_events (conversation_id, type, actor_username, details, created_at)
@@ -113,6 +104,51 @@ async function broadcastToParticipants(conversationId, io, event, payload = {}) 
   participants.forEach(({ username }) => {
     io.to(`user:${username}`).emit(event, { conversationId, ...payload });
   });
+}
+
+function validateBroadcastPayload(broadcast) {
+  if (!broadcast) return null;
+  if (typeof broadcast !== 'object') return 'Invalid broadcast payload';
+  if (typeof broadcast.encrypted_msg_content !== 'string' || !broadcast.encrypted_msg_content.trim()) {
+    return 'Encrypted broadcast content required';
+  }
+  if (typeof broadcast.content_key_number !== 'number') {
+    return 'Broadcast content_key_number must be a number';
+  }
+  return null;
+}
+
+async function saveBroadcastMessage(conversationId, username, io, broadcast) {
+  if (!broadcast) return null;
+  const error = validateBroadcastPayload(broadcast);
+  if (error) {
+    const err = new Error(error);
+    err.status = 400;
+    throw err;
+  }
+
+  const timestamp = Date.now();
+  const result = await run(
+    `INSERT INTO messages (conversation_id, content_key_number, encrypted_msg_content, sender_username, created_at, updated_at, is_deleted)
+     VALUES (?, ?, ?, ?, ?, NULL, 0)`
+    ,
+    [conversationId, broadcast.content_key_number, broadcast.encrypted_msg_content, username, timestamp]
+  );
+
+  if (io) {
+    io.to(`conversation:${conversationId}`).emit('new-message', {
+      id: result.id,
+      conversation_id: conversationId,
+      content_key_number: broadcast.content_key_number,
+      encrypted_msg_content: broadcast.encrypted_msg_content,
+      sender_username: username,
+      created_at: timestamp,
+      updated_at: null,
+      is_deleted: 0
+    });
+  }
+
+  return { id: result.id, timestamp };
 }
 
 // GET /api/conversations - Get all conversations for current user
@@ -224,7 +260,7 @@ router.get('/:conversationId', authenticateToken, async (req, res) => {
 router.post('/:conversationId/participants', authenticateToken, async (req, res) => {
   try {
     const { conversationId } = req.params;
-    const { share_history, entries, content_key_number } = req.body;
+    const { share_history, entries, content_key_number, system_broadcast } = req.body;
     const io = req.app.get('io');
 
     if (!Array.isArray(entries) || entries.length === 0) {
@@ -318,14 +354,15 @@ router.post('/:conversationId/participants', authenticateToken, async (req, res)
         added_by: currentUsername
       });
       await broadcastToParticipants(conversationId, io, 'conversation-updated');
-      if (io) {
-        io.to(`conversation:${conversationId}`).emit('conversation-system-message', {
-          conversation_id: conversationId,
-          type: 'participant-added',
-          actor: currentUsername,
-          usernames: newUsernames,
-          timestamp: Date.now()
-        });
+
+      await run(
+        `INSERT INTO conversation_events (conversation_id, type, actor_username, details, created_at)
+         VALUES (?, ?, ?, ?, ?)`,
+        [conversationId, 'participant-added', currentUsername, JSON.stringify({ usernames: newUsernames, share_history: true }), Date.now()]
+      );
+
+      if (system_broadcast) {
+        await saveBroadcastMessage(conversationId, currentUsername, io, system_broadcast);
       }
 
       return res.json({
@@ -365,31 +402,32 @@ router.post('/:conversationId/participants', authenticateToken, async (req, res)
       );
     }
 
-    const allUsernames = Array.from(new Set(entries.map(entry => entry.username)));
+    const newUsernames = Array.from(uniqueUsernames);
     await broadcastToParticipants(conversationId, io, 'conversation-key-rotated', {
-      content_key_number: newKeyNumber
+      content_key_number: content_key_number
     });
     await broadcastToParticipants(conversationId, io, 'conversation-participants-added', {
-      usernames: allUsernames,
+      usernames: newUsernames,
       share_history: false,
       added_by: currentUsername
     });
     await broadcastToParticipants(conversationId, io, 'conversation-updated');
-    if (io) {
-      io.to(`conversation:${conversationId}`).emit('conversation-system-message', {
-        conversation_id: conversationId,
-        type: 'participant-added',
-        actor: currentUsername,
-        usernames: allUsernames,
-        timestamp: Date.now()
-      });
+
+    await run(
+      `INSERT INTO conversation_events (conversation_id, type, actor_username, details, created_at)
+       VALUES (?, ?, ?, ?, ?)`,
+      [conversationId, 'participant-added', currentUsername, JSON.stringify({ usernames: newUsernames, share_history: false }), Date.now()]
+    );
+
+    if (system_broadcast) {
+      await saveBroadcastMessage(conversationId, currentUsername, io, system_broadcast);
     }
 
     return res.json({
       message: 'Conversation key rotated',
       share_history: false,
       content_key_number,
-      participants: Array.from(uniqueUsernames)
+      participants: newUsernames
     });
   } catch (error) {
     console.error('Update participants error:', error);
@@ -402,6 +440,7 @@ router.delete('/:conversationId', authenticateToken, async (req, res) => {
   try {
     const { conversationId } = req.params;
     const username = req.user.username;
+    const { system_broadcast } = req.body ?? {};
     const io = req.app.get('io');
 
     const latestGlobalKey = await getConversationLatestKey(conversationId);
@@ -432,6 +471,10 @@ router.delete('/:conversationId', authenticateToken, async (req, res) => {
        VALUES (?, ?, ?, ?, ?)`,
       [conversationId, 'participant-removed', username, JSON.stringify({ usernames: [username] }), Date.now()]
     );
+
+    if (system_broadcast) {
+      await saveBroadcastMessage(conversationId, username, io, system_broadcast);
+    }
 
     res.json({ message: 'Conversation deleted successfully' });
   } catch (error) {

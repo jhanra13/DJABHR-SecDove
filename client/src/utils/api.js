@@ -84,8 +84,11 @@ export const conversationsAPI = {
     return await request(`/conversations/${conversationId}`);
   },
   
-  deleteConversation: async (conversationId) => {
-    return await request(`/conversations/${conversationId}`, { method: 'DELETE' });
+  deleteConversation: async (conversationId, payload) => {
+    return await request(`/conversations/${conversationId}`, {
+      method: 'DELETE',
+      body: payload
+    });
   },
 
   addParticipants: async (conversationId, payload) => {
