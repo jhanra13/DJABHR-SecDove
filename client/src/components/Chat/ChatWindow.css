@@ -96,7 +96,9 @@
   border-radius: var(--radius-md);
   font-size: 0.9rem;
   line-height: 1.4;
-  word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  max-width: min(32rem, 85vw);
 }
 
 .message.sent .message-text {
