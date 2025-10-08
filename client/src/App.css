@@ -3,4 +3,6 @@
   justify-content: center;
   align-items: center;
   min-height: 100vh;
+  padding: clamp(12px, 5vw, 48px);
+  box-sizing: border-box;
 }

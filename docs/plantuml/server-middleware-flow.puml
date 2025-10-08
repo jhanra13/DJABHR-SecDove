@@ -1,0 +1,20 @@
+@startuml
+title Server Middleware Pipeline
+
+start
+:helmet (CSP, HSTS);
+:cors (origin, credentials);
+:express.json (10mb);
+:express.urlencoded (10mb);
+:rateLimit (/api/*);
+if (NODE_ENV==development) then (yes)
+  :request logger;
+endif
+:route dispatch (/api/auth|contacts|conversations|messages);
+if (no route) then (404)
+  :return { error: 'Endpoint not found' };
+endif
+:global error handler -> { error, stack? };
+stop
+@enduml
+

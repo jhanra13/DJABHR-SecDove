@@ -1,0 +1,33 @@
+@startuml
+title Client Sequence: Register and Login (E2EE)
+
+actor User
+participant "AuthContext" as AC
+participant "CryptoUtils" as CU
+participant "APIClient.authAPI" as API
+
+== Register ==
+User -> AC: register(username, password)
+AC -> API: GET /auth/check-username/:username
+API --> AC: { exists: false }
+AC -> CU: generateSalt()
+AC -> CU: derivePasswordKey(password, salt)
+AC -> CU: generateKeyPair()
+AC -> CU: encryptPrivateKey(privateKey, passwordKey)
+AC -> CU: exportPublicKey(publicKey)
+AC -> API: POST /auth/register { username, password, public_key, salt, encrypted_private_key }
+API --> AC: { user, token }
+AC -> storage: save token + sessionData (no privateKey)
+AC --> User: success
+
+== Login ==
+User -> AC: login(username, password)
+AC -> API: POST /auth/login { username, password }
+API --> AC: { user, token }
+AC -> storage: save token + sessionData
+AC -> CU: derivePasswordKey(password, user.salt)
+AC -> CU: decryptPrivateKey(user.encrypted_private_key, passwordKey)
+AC --> User: success (session with privateKey in memory)
+
+@enduml
+

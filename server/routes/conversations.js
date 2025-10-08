@@ -60,23 +60,45 @@ router.post('/', authenticateToken, async (req, res) => {
   }
 });
 
+// Helper to fetch latest key number for user in conversation
+async function getLatestUserKey(conversationId, username) {
+  const row = await get(
+    `SELECT MAX(content_key_number) as max_key
+     FROM conversations
+     WHERE id = ? AND username = ?`,
+    [conversationId, username]
+  );
+  return row?.max_key ?? null;
+}
+
 // GET /api/conversations - Get all conversations for current user
 router.get('/', authenticateToken, async (req, res) => {
   try {
     const username = req.user.username;
 
-    // Get all conversation entries for the user
     const userConversations = await all(
-      `SELECT DISTINCT id, content_key_number, encrypted_content_key, created_at
-       FROM conversations
-       WHERE username = ?
-       ORDER BY created_at DESC`,
+      `SELECT c1.id, c1.content_key_number, c1.encrypted_content_key, c1.created_at
+       FROM conversations c1
+       WHERE c1.username = ?
+         AND c1.content_key_number = (
+           SELECT MAX(c2.content_key_number)
+           FROM conversations c2
+           WHERE c2.id = c1.id AND c2.username = c1.username
+         )
+       ORDER BY c1.created_at DESC`,
       [username]
     );
 
-    // For each conversation, get all participants
     const conversationsWithParticipants = await Promise.all(
       userConversations.map(async (conv) => {
+        const keyHistory = await all(
+          `SELECT content_key_number, encrypted_content_key, created_at
+           FROM conversations
+           WHERE id = ? AND username = ?
+           ORDER BY content_key_number ASC`,
+          [conv.id, username]
+        );
+
         const participants = await all(
           `SELECT username, encrypted_content_key
            FROM conversations
@@ -89,7 +111,8 @@ router.get('/', authenticateToken, async (req, res) => {
           content_key_number: conv.content_key_number,
           encrypted_content_key: conv.encrypted_content_key,
           participants: participants.map(p => p.username),
-          created_at: conv.created_at
+          created_at: conv.created_at,
+          keys: keyHistory
         };
       })
     );
@@ -129,17 +152,129 @@ router.get('/:conversationId', authenticateToken, async (req, res) => {
       [conversationId, userEntry.content_key_number]
     );
 
+    const keyHistory = await all(
+      `SELECT content_key_number, encrypted_content_key, created_at
+       FROM conversations
+       WHERE id = ? AND username = ?
+       ORDER BY content_key_number ASC`,
+      [conversationId, username]
+    );
+
     res.json({
       conversation: {
         id: userEntry.id,
         content_key_number: userEntry.content_key_number,
         encrypted_content_key: userEntry.encrypted_content_key,
         participants: participants.map(p => p.username),
-        created_at: userEntry.created_at
+        created_at: userEntry.created_at,
+        keys: keyHistory
       }
     });
   } catch (error) {
     console.error('Get conversation error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /api/conversations/:conversationId/participants - Add participant(s) or rotate key
+router.post('/:conversationId/participants', authenticateToken, async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+    const { share_history, entries, content_key_number } = req.body;
+
+    if (!Array.isArray(entries) || entries.length === 0) {
+      return res.status(400).json({ error: 'Participant entries are required' });
+    }
+
+    const currentUsername = req.user.username;
+    const latestKeyNumber = await getLatestUserKey(conversationId, currentUsername);
+
+    if (latestKeyNumber === null) {
+      return res.status(404).json({ error: 'Conversation not found or access denied' });
+    }
+
+    const timestamp = Date.now();
+
+    const validateEntry = async (entry) => {
+      if (!entry?.username || typeof entry.username !== 'string' || !entry.encrypted_content_key) {
+        throw new Error('Invalid participant entry');
+      }
+      const userExists = await get('SELECT id FROM users WHERE username = ?', [entry.username]);
+      if (!userExists) {
+        throw new Error(`User ${entry.username} not found`);
+      }
+    };
+
+    if (share_history) {
+      for (const entry of entries) {
+        try {
+          await validateEntry(entry);
+        } catch (err) {
+          return res.status(400).json({ error: err.message });
+        }
+
+        const alreadyParticipant = await get(
+          `SELECT 1 FROM conversations WHERE id = ? AND content_key_number = ? AND username = ?`,
+          [conversationId, latestKeyNumber, entry.username]
+        );
+
+        if (alreadyParticipant) {
+          continue;
+        }
+
+        await run(
+          `INSERT INTO conversations (id, content_key_number, username, encrypted_content_key, created_at)
+           VALUES (?, ?, ?, ?, ?)`,
+          [conversationId, latestKeyNumber, entry.username, entry.encrypted_content_key, timestamp]
+        );
+      }
+
+      return res.json({
+        message: 'Participants added with existing history',
+        share_history: true,
+        content_key_number: latestKeyNumber,
+        participants: entries.map(e => e.username)
+      });
+    }
+
+    if (typeof content_key_number !== 'number') {
+      return res.status(400).json({ error: 'New content_key_number required when not sharing history' });
+    }
+
+    if (content_key_number <= latestKeyNumber) {
+      return res.status(400).json({ error: 'New content key number must be greater than existing' });
+    }
+
+    const uniqueUsernames = new Set();
+    for (const entry of entries) {
+      try {
+        await validateEntry(entry);
+      } catch (err) {
+        return res.status(400).json({ error: err.message });
+      }
+      uniqueUsernames.add(entry.username);
+    }
+
+    if (!uniqueUsernames.has(currentUsername)) {
+      return res.status(400).json({ error: 'Current user must be included when rotating key' });
+    }
+
+    for (const entry of entries) {
+      await run(
+        `INSERT INTO conversations (id, content_key_number, username, encrypted_content_key, created_at)
+         VALUES (?, ?, ?, ?, ?)`,
+        [conversationId, content_key_number, entry.username, entry.encrypted_content_key, timestamp]
+      );
+    }
+
+    return res.json({
+      message: 'Conversation key rotated',
+      share_history: false,
+      content_key_number,
+      participants: Array.from(uniqueUsernames)
+    });
+  } catch (error) {
+    console.error('Update participants error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

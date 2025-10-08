@@ -1,0 +1,38 @@
+@startuml
+title Sequence: Register and Login
+
+actor Client
+participant "AuthRoutes" as Auth
+participant "DB" as DB
+participant "AuthUtil (bcrypt/jwt)" as AU
+
+== Register ==
+Client -> Auth: POST /api/auth/register\n{ username, password, public_key, salt, encrypted_private_key }
+Auth -> AU: hashPassword(password)
+AU --> Auth: password_hash
+Auth -> DB: INSERT users(username, password_hash, public_key, salt, encrypted_private_key, created_at)
+DB --> Auth: { id }
+Auth -> AU: generateToken(id, username)
+AU --> Auth: token
+Auth --> Client: 201\n{ message, user:{id, username, public_key, salt, encrypted_private_key}, token }
+
+== Login ==
+Client -> Auth: POST /api/auth/login\n{ username, password }
+Auth -> DB: SELECT id, username, password_hash, public_key, salt, encrypted_private_key FROM users WHERE username=?
+DB --> Auth: row
+Auth -> AU: verifyPassword(password, password_hash)
+AU --> Auth: true/false
+Auth -> AU: generateToken(id, username)
+AU --> Auth: token
+Auth --> Client: 200\n{ message, user:{...}, token }
+
+== Get Current User ==
+Client -> Auth: GET /api/auth/user (Authorization: Bearer token)
+Auth -> AU: verifyToken(token)
+AU --> Auth: { userId, username }
+Auth -> DB: SELECT id, username, public_key, salt, encrypted_private_key, created_at WHERE id=?
+DB --> Auth: user
+Auth --> Client: 200 { user }
+
+@enduml
+

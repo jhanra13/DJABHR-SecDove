@@ -1,50 +1,51 @@
-// API client for backend communication
-import axios from 'axios';
-
+// API client using fetch
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
-const apiClient = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json'
+async function request(path, { method = 'GET', body, params } = {}) {
+  const url = new URL(API_BASE_URL + path);
+  if (params) {
+    Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
   }
-});
-
-// Add token to requests
-apiClient.interceptors.request.use((config) => {
+  const headers = { 'Content-Type': 'application/json' };
   const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const resp = await fetch(url.toString(), {
+    method,
+    headers,
+    body: body ? JSON.stringify(body) : undefined
+  });
+  const text = await resp.text();
+  const data = text ? JSON.parse(text) : {};
+  if (!resp.ok) {
+    const error = new Error(data?.error || resp.statusText);
+    error.response = { status: resp.status, data };
+    throw error;
   }
-  return config;
-});
+  return data;
+}
 
 // ============= Authentication APIs =============
 
 export const authAPI = {
   register: async (userData) => {
-    const response = await apiClient.post('/auth/register', userData);
-    return response.data;
+    return await request('/auth/register', { method: 'POST', body: userData });
   },
   
   login: async (credentials) => {
-    const response = await apiClient.post('/auth/login', credentials);
-    return response.data;
+    return await request('/auth/login', { method: 'POST', body: credentials });
   },
   
   getUser: async () => {
-    const response = await apiClient.get('/auth/user');
-    return response.data;
+    return await request('/auth/user');
   },
   
   logout: async () => {
-    const response = await apiClient.post('/auth/logout');
-    return response.data;
+    return await request('/auth/logout', { method: 'POST' });
   },
 
   checkUsername: async (username) => {
-    const response = await apiClient.get(`/auth/check-username/${encodeURIComponent(username)}`);
-    return response.data;
+    return await request(`/auth/check-username/${encodeURIComponent(username)}`);
   }
 };
 
@@ -52,23 +53,19 @@ export const authAPI = {
 
 export const contactsAPI = {
   addContact: async (contactUsername) => {
-    const response = await apiClient.post('/contacts', { contact_username: contactUsername });
-    return response.data;
+    return await request('/contacts', { method: 'POST', body: { contact_username: contactUsername } });
   },
   
   getContacts: async () => {
-    const response = await apiClient.get('/contacts');
-    return response.data;
+    return await request('/contacts');
   },
   
   deleteContact: async (contactId) => {
-    const response = await apiClient.delete(`/contacts/${contactId}`);
-    return response.data;
+    return await request(`/contacts/${contactId}`, { method: 'DELETE' });
   },
   
   getPublicKey: async (username) => {
-    const response = await apiClient.get(`/contacts/${username}/public-key`);
-    return response.data;
+    return await request(`/contacts/${username}/public-key`);
   }
 };
 
@@ -76,23 +73,26 @@ export const contactsAPI = {
 
 export const conversationsAPI = {
   createConversation: async (conversationEntries) => {
-    const response = await apiClient.post('/conversations', { conversation_entries: conversationEntries });
-    return response.data;
+    return await request('/conversations', { method: 'POST', body: { conversation_entries: conversationEntries } });
   },
   
   getConversations: async () => {
-    const response = await apiClient.get('/conversations');
-    return response.data;
+    return await request('/conversations');
   },
   
   getConversation: async (conversationId) => {
-    const response = await apiClient.get(`/conversations/${conversationId}`);
-    return response.data;
+    return await request(`/conversations/${conversationId}`);
   },
   
   deleteConversation: async (conversationId) => {
-    const response = await apiClient.delete(`/conversations/${conversationId}`);
-    return response.data;
+    return await request(`/conversations/${conversationId}`, { method: 'DELETE' });
+  },
+
+  addParticipants: async (conversationId, payload) => {
+    return await request(`/conversations/${conversationId}/participants`, {
+      method: 'POST',
+      body: payload
+    });
   }
 };
 
@@ -100,33 +100,22 @@ export const conversationsAPI = {
 
 export const messagesAPI = {
   sendMessage: async (messageData) => {
-    const response = await apiClient.post('/messages', messageData);
-    return response.data;
+    return await request('/messages', { method: 'POST', body: messageData });
   },
   
   getMessages: async (conversationId, limit = 50, offset = 0) => {
-    const response = await apiClient.get(`/messages/${conversationId}`, {
-      params: { limit, offset }
-    });
-    return response.data;
+    return await request(`/messages/${conversationId}`, { params: { limit, offset } });
   },
   
   updateMessage: async (messageId, encryptedContent) => {
-    const response = await apiClient.put(`/messages/${messageId}`, { encrypted_msg_content: encryptedContent });
-    return response.data;
+    return await request(`/messages/${messageId}`, { method: 'PUT', body: { encrypted_msg_content: encryptedContent } });
   },
   
   deleteMessage: async (messageId) => {
-    const response = await apiClient.delete(`/messages/${messageId}`);
-    return response.data;
+    return await request(`/messages/${messageId}`, { method: 'DELETE' });
   },
   
   getRecentMessages: async (limit = 20) => {
-    const response = await apiClient.get('/messages/recent/all', {
-      params: { limit }
-    });
-    return response.data;
+    return await request('/messages/recent/all', { params: { limit } });
   }
 };
-
-export default apiClient;

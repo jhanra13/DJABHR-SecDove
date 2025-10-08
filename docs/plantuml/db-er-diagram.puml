@@ -1,0 +1,47 @@
+@startuml
+title Database ER Diagram (SQLite)
+
+entity users {
+  *id : INTEGER PK
+  *username : TEXT UNIQUE
+  *password_hash : TEXT
+  *public_key : TEXT
+  *salt : TEXT
+  *encrypted_private_key : TEXT
+  *created_at : INTEGER
+}
+
+entity contacts {
+  *id : INTEGER PK
+  *user_id : INTEGER FK -> users.id
+  *contact_user_id : INTEGER FK -> users.id
+  *contact_username : TEXT
+  *added_at : INTEGER
+}
+
+entity conversations {
+  *id : INTEGER
+  *content_key_number : INTEGER
+  *username : TEXT FK -> users.username
+  *encrypted_content_key : TEXT
+  *created_at : INTEGER
+  -- PK (id, content_key_number, username)
+}
+
+entity messages {
+  *id : INTEGER PK
+  *conversation_id : INTEGER
+  *content_key_number : INTEGER
+  *encrypted_msg_content : TEXT
+  *created_at : INTEGER
+  *updated_at : INTEGER?
+  *is_deleted : INTEGER
+}
+
+users ||--o{ contacts : has
+users ||--o{ contacts : referencedBy
+users ||--o{ conversations : participant
+conversations ||--o{ messages : contains
+
+@enduml
+

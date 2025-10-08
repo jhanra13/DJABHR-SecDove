@@ -39,12 +39,12 @@
   --shadow-heavy: 0 4px 16px rgba(0,0,0,0.12);
 
   /* Layout */
-  --sidebar-width: 70px;
+  --sidebar-width: clamp(56px, 6vw, 80px);
   --discussions-width: 35%;
-  --container-height: 700px;
+  --container-height: clamp(520px, 90vh, 720px);
+  --app-border-radius: clamp(10px, 2vw, 20px);
 
   /* Component Sizes */
   --avatar-size: 45px;
   --online-dot-size: 13px;
 }
-

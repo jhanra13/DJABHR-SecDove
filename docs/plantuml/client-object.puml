@@ -1,0 +1,33 @@
+@startuml
+title Client Object Diagram (Runtime State)
+
+object AuthSession {
+  userId
+  username
+  publicKey (hex)
+  salt (hex)
+  encrypted_private_key (hex)
+  privateKey (in-memory only)
+  token (JWT)
+  loginTime
+}
+
+object ContentKeyCache {
+  <conversationId> -> { keyNumber, key }
+}
+
+object MessagesState {
+  <conversationId> -> [ { id, sender, content, timestamp, created_at, updated_at? } ]
+}
+
+object SocketIOClient {
+  url = http://localhost:8000
+  events: new-message, authenticate, join-conversation, leave-conversation
+}
+
+AuthSession -- ContentKeyCache
+AuthSession -- SocketIOClient
+ContentKeyCache -- MessagesState
+
+@enduml
+

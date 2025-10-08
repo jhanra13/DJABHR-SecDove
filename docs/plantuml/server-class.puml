@@ -1,0 +1,66 @@
+@startuml
+title Server Component Overview (Minimal)
+
+legend top
+  Minimal components wired according to the streamlined implementation.
+  Focus on cohesion and low coupling.
+endlegend
+
+component ServerApp
+
+package "HTTP Routes" {
+  component AuthRoutes
+  component ContactsRoutes
+  component ConversationsRoutes
+  component MessagesRoutes
+}
+
+package "Services" {
+  component AuthService <<service>>
+  component DBVerifyService <<service>>
+  component RealtimeGateway <<realtime>>
+}
+
+database SQLiteDB
+
+package "Middleware" {
+  component AuthMiddleware
+  component RateLimiter
+}
+
+component EnvConfig <<config>>
+
+ServerApp --> AuthRoutes
+ServerApp --> ContactsRoutes
+ServerApp --> ConversationsRoutes
+ServerApp --> MessagesRoutes
+ServerApp --> AuthMiddleware
+ServerApp --> RateLimiter
+ServerApp --> DBVerifyService
+ServerApp --> EnvConfig
+ServerApp --> RealtimeGateway
+
+AuthRoutes --> AuthService
+ContactsRoutes --> SQLiteDB
+ConversationsRoutes --> SQLiteDB
+MessagesRoutes --> SQLiteDB
+MessagesRoutes --> RealtimeGateway
+
+AuthService --> SQLiteDB
+AuthMiddleware --> AuthService : verifyToken
+DBVerifyService --> SQLiteDB
+EnvConfig --> ServerApp
+EnvConfig --> AuthService
+EnvConfig --> RealtimeGateway
+EnvConfig --> SQLiteDB
+
+note right of EnvConfig
+  Minimal .env loader (currently inlined).
+  Centralise if codebase grows.
+end note
+
+note bottom of SQLiteDB
+  Schema/indices detailed in db-er-diagram.puml
+end note
+
+@enduml

@@ -10,13 +10,20 @@ import NewConversationModal from '../Modals/NewConversationModal';
 import { useViewContext, VIEWS } from '../../context/ViewContext';
 import { useAuth } from '../../context/AuthContext';
 import { useMessages } from '../../context/MessagesContext';
+import { useConversations } from '../../context/ConversationsContext';
+import AddParticipantModal from '../Modals/AddParticipantModal';
 
 function AppContainer() {
     const [activeDiscussion, setActiveDiscussion] = useState(null);
     const [showAddContact, setShowAddContact] = useState(false);
     const [showNewConversation, setShowNewConversation] = useState(false);
+    const [showAddParticipant, setShowAddParticipant] = useState(false);
+    const [participantTarget, setParticipantTarget] = useState(null);
+    const [participantError, setParticipantError] = useState('');
+    const [participantLoading, setParticipantLoading] = useState(false);
     const { currentView } = useViewContext();
     const { currentSession } = useAuth();
+    const { addParticipant } = useConversations();
     
     // Get messages context
     const { getMessages, loadMessages, sendMessage, loading: messagesLoading, error: messagesError } = useMessages();
@@ -37,6 +44,9 @@ function AppContainer() {
             setActiveDiscussion(null);
             setShowAddContact(false);
             setShowNewConversation(false);
+            setShowAddParticipant(false);
+            setParticipantTarget(null);
+            setParticipantError('');
         }
     }, [currentSession]);
 
@@ -44,6 +54,33 @@ function AppContainer() {
     const handleConversationCreated = (conversation) => {
         // Automatically select the newly created conversation
         setActiveDiscussion(conversation);
+    };
+
+    const handleParticipantModalClose = () => {
+        setShowAddParticipant(false);
+        setParticipantTarget(null);
+        setParticipantError('');
+    };
+
+    const handleOpenAddParticipant = (conversation) => {
+        if (!conversation) return;
+        setParticipantTarget(conversation);
+        setParticipantError('');
+        setShowAddParticipant(true);
+    };
+
+    const handleAddParticipant = async ({ username, shareHistory }) => {
+        if (!participantTarget) return;
+        setParticipantLoading(true);
+        setParticipantError('');
+        try {
+            await addParticipant(participantTarget.id, username, shareHistory);
+            handleParticipantModalClose();
+        } catch (err) {
+            setParticipantError(err.message);
+        } finally {
+            setParticipantLoading(false);
+        }
     };
 
     const renderView = () => {
@@ -63,6 +100,7 @@ function AppContainer() {
                             loading={messagesLoading}
                             error={messagesError}
                             onNewConversation={() => setShowNewConversation(true)}
+                            onAddParticipant={handleOpenAddParticipant}
                         />
                     </>
                 );
@@ -101,6 +139,15 @@ function AppContainer() {
                 isOpen={showNewConversation}
                 onClose={() => setShowNewConversation(false)}
                 onConversationCreated={handleConversationCreated}
+            />
+
+            <AddParticipantModal
+                isOpen={showAddParticipant}
+                onClose={handleParticipantModalClose}
+                onSubmit={handleAddParticipant}
+                loading={participantLoading}
+                error={participantError}
+                conversation={participantTarget}
             />
         </>
     );

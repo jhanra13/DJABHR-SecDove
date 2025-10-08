@@ -1,7 +1,4 @@
-// View Context for Navigation State Management
 import React, { createContext, useContext, useState } from 'react';
-
-console.log('👁️ ViewContext: Module loaded');
 
 export const VIEWS = {
   DISCUSSIONS: 'discussions',
@@ -20,7 +17,6 @@ export const useViewContext = () => {
 };
 
 export const ViewProvider = ({ children }) => {
-  console.log('👁️ ViewProvider: Initializing...');
   const [currentView, setCurrentView] = useState(VIEWS.DISCUSSIONS);
   const [selectedConversation, setSelectedConversation] = useState(null);
 

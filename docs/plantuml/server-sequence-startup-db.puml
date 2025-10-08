@@ -1,0 +1,22 @@
+@startuml
+title Server Startup: DB Verification and Init
+
+participant "ServerApp" as App
+participant "DBVerify" as DV
+
+App -> DV: ensureDatabaseIntegrity()
+DV -> DV: verifyDatabase()
+DV --> App: { success: true } | errors
+alt success
+  App -> App: start httpServer.listen(PORT)
+else issues found
+  App <- DV: errors[]
+  App -> DV: initializeDatabase()
+  DV --> App: true
+  App -> DV: verifyDatabase()
+  DV --> App: { success: true }
+  App -> App: start httpServer.listen(PORT)
+end
+
+@enduml
+

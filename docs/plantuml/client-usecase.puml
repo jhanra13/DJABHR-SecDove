@@ -1,0 +1,57 @@
+@startuml
+title Client Use Cases
+
+actor User
+
+rectangle "Auth" {
+  usecase C1 as "Register (generate RSA, encrypt private key)"
+  usecase C2 as "Login (decrypt private key)"
+  usecase C3 as "Logout"
+}
+
+rectangle "Contacts" {
+  usecase C4 as "Add Contact"
+  usecase C5 as "List Contacts"
+  usecase C6 as "Delete Contact"
+}
+
+rectangle "Conversations" {
+  usecase C7 as "Create Conversation (encrypt content key per participant)"
+  usecase C8 as "List Conversations (decrypt content keys)"
+  usecase C9 as "Open Conversation"
+  usecase C10 as "Delete Conversation"
+}
+
+rectangle "Messages" {
+  usecase C11 as "Send Message (AES-GCM)"
+  usecase C12 as "Load Messages (decrypt)"
+  usecase C13 as "Update Message (re-encrypt)"
+  usecase C14 as "Delete Message"
+  usecase C15 as "Receive Real-time Message"
+}
+
+rectangle "Backup" {
+  usecase C16 as "Create/Export Backup"
+  usecase C17 as "Import/Restore Backup"
+}
+
+User --> C1
+User --> C2
+User --> C3
+User --> C4
+User --> C5
+User --> C6
+User --> C7
+User --> C8
+User --> C9
+User --> C10
+User --> C11
+User --> C12
+User --> C13
+User --> C14
+User --> C15
+User --> C16
+User --> C17
+
+@enduml
+
