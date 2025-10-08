@@ -1,9 +1,16 @@
 @startuml
 title Server Component Design – Elaborated
 
-skinparam componentStyle rectangle
+left to right direction
 
-package "HTTP Layer (Express)" {
+skinparam componentStyle rectangle
+skinparam defaultFontSize 18
+skinparam ArrowThickness 2
+skinparam linetype ortho
+skinparam Padding 8
+scale 1600*900
+
+package "Lane 1: HTTP Layer (Express)" {
   class AuthRoutes <<component>> {
     -- Endpoints --
     + POST /api/auth/register
@@ -40,7 +47,7 @@ package "HTTP Layer (Express)" {
   }
 }
 
-package "Security & Middleware" {
+package "Lane 2: Security & Middleware" {
   class AuthMiddleware <<component>> {
     -- Operations --
     + authenticateToken(req,res,next)
@@ -59,7 +66,7 @@ package "Security & Middleware" {
   }
 }
 
-package "Realtime" {
+package "Lane 3: Realtime" {
   class RealtimeGateway <<component>> {
     -- Events --
     + on('authenticate')
@@ -77,7 +84,7 @@ package "Realtime" {
   }
 }
 
-package "Persistence" {
+package "Lane 4: Persistence" {
   class Database <<component>> {
     -- Tables --
     + users, contacts, conversations, messages, conversation_events
@@ -92,7 +99,7 @@ package "Persistence" {
   }
 }
 
-package "Config" {
+package "Lane 5: Config" {
   class EnvConfig <<component>> {
     -- Operations --
     + getEnv(key, default): string
@@ -122,9 +129,8 @@ EnvConfig ..> MessagesRoutes
 EnvConfig ..> RealtimeGateway
 EnvConfig ..> Database
 
-note bottom
-Patterns: Layered architecture with routing/controllers, middleware for cross-cutting concerns, and a persistence layer. Realtime via Socket.IO.
-end note
+legend bottom
+Lane layout reduces edge overlap: HTTP → Security/Realtime → Persistence/Config. Routing/controllers, cross‑cutting middleware, persistence, and Socket.IO realtime are separated.
+endlegend
 
 @enduml
-

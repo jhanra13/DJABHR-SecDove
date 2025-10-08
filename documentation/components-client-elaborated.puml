@@ -1,9 +1,16 @@
 @startuml
 title Client Component Design – Elaborated
 
-skinparam componentStyle rectangle
+left to right direction
 
-package "Contexts" {
+skinparam componentStyle rectangle
+skinparam defaultFontSize 18
+skinparam ArrowThickness 2
+skinparam linetype ortho
+skinparam Padding 8
+scale 1600*900
+
+package "Lane 2: Contexts" {
   class AuthContext <<component>> {
     -- Attributes --
     - currentSession: Session | null
@@ -82,7 +89,7 @@ package "Contexts" {
   }
 }
 
-package "APIs (HTTP)" {
+package "Lane 3: APIs (HTTP)" {
   interface IAuthAPI {
     + register(userData)
     + login(credentials)
@@ -112,7 +119,7 @@ package "APIs (HTTP)" {
   }
 }
 
-package "Utilities" {
+package "Lane 4: Utilities" {
   class CryptoUtils <<utility>> {
     + generateKeyPair()
     + derivePasswordKey(password, salt)
@@ -142,9 +149,9 @@ package "Utilities" {
     + createAndExportBackup()
     + importAndRestoreBackup(file, merge)
   }
+package "Lane 1: UI" {
+  class UI
 }
-
-class UI
 
 UI ..> AuthContext : uses
 UI ..> ContactsContext : uses
@@ -164,9 +171,8 @@ ConversationsContext ..> CryptoUtils
 MessagesContext ..> CryptoUtils
 MessageBackup ..> MessageStorage
 
-note bottom
-Exposed interfaces are the Context operations consumed by UI/components. APIs wrap HTTP endpoints; WebSocketContext exposes realtime methods.
-end note
+legend bottom
+Left‑to‑right lanes reduce edge crossings: UI → Contexts → APIs/Utilities. Exposed context operations are consumed by UI; APIs wrap REST; WebSocketContext encapsulates realtime.
+endlegend
 
 @enduml
-
