@@ -97,6 +97,7 @@ function MessagesArea({ discussion, messages = [], loading, error }) {
                         time={new Date(message.timestamp).toLocaleString()}
                         avatarUrl={message.sender === currentSession?.username ? '' : discussion?.avatarUrl}
                         edited={Boolean(message.edited)}
+                        system={Boolean(message.system)}
                         onEdit={message.sender === currentSession?.username ? () => handleEditMessage(message) : undefined}
                         onDelete={message.sender === currentSession?.username ? () => handleDeleteMessage(message) : undefined}
                     />

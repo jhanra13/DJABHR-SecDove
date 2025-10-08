@@ -52,6 +52,21 @@ router.post('/', authenticateToken, async (req, res) => {
       content_key_number: contentKeyNumber,
       initiated_by: currentUsername
     });
+    if (io) {
+      io.to(`conversation:${conversationId}`).emit('conversation-system-message', {
+        conversation_id: conversationId,
+        type: 'conversation-created',
+        actor: currentUsername,
+        usernames: participantUsernames.filter(u => u !== currentUsername),
+        timestamp
+      });
+    }
+
+    await run(
+      `INSERT INTO conversation_events (conversation_id, type, actor_username, details, created_at)
+       VALUES (?, ?, ?, ?, ?)`,
+      [conversationId, 'conversation-created', currentUsername, JSON.stringify({ usernames: participantUsernames }), timestamp]
+    );
 
     res.status(201).json({
       message: 'Conversation created successfully',
@@ -299,9 +314,19 @@ router.post('/:conversationId/participants', authenticateToken, async (req, res)
       const newUsernames = entries.map(e => e.username);
       await broadcastToParticipants(conversationId, io, 'conversation-participants-added', {
         usernames: newUsernames,
-        share_history: true
+        share_history: true,
+        added_by: currentUsername
       });
       await broadcastToParticipants(conversationId, io, 'conversation-updated');
+      if (io) {
+        io.to(`conversation:${conversationId}`).emit('conversation-system-message', {
+          conversation_id: conversationId,
+          type: 'participant-added',
+          actor: currentUsername,
+          usernames: newUsernames,
+          timestamp: Date.now()
+        });
+      }
 
       return res.json({
         message: 'Participants added with existing history',
@@ -346,9 +371,19 @@ router.post('/:conversationId/participants', authenticateToken, async (req, res)
     });
     await broadcastToParticipants(conversationId, io, 'conversation-participants-added', {
       usernames: allUsernames,
-      share_history: false
+      share_history: false,
+      added_by: currentUsername
     });
     await broadcastToParticipants(conversationId, io, 'conversation-updated');
+    if (io) {
+      io.to(`conversation:${conversationId}`).emit('conversation-system-message', {
+        conversation_id: conversationId,
+        type: 'participant-added',
+        actor: currentUsername,
+        usernames: allUsernames,
+        timestamp: Date.now()
+      });
+    }
 
     return res.json({
       message: 'Conversation key rotated',
@@ -392,6 +427,11 @@ router.delete('/:conversationId', authenticateToken, async (req, res) => {
       usernames: [username]
     });
     await broadcastToParticipants(conversationId, io, 'conversation-updated');
+    await run(
+      `INSERT INTO conversation_events (conversation_id, type, actor_username, details, created_at)
+       VALUES (?, ?, ?, ?, ?)`,
+      [conversationId, 'participant-removed', username, JSON.stringify({ usernames: [username] }), Date.now()]
+    );
 
     res.json({ message: 'Conversation deleted successfully' });
   } catch (error) {

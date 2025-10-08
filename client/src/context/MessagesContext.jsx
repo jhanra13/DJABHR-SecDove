@@ -15,6 +15,37 @@ export const useMessages = () => {
 
 const sortByTimestamp = (messages) => [...messages].sort((a, b) => a.timestamp - b.timestamp);
 
+const describeEvent = ({ type, actor, usernames = [], shareHistory }) => {
+  const names = usernames.filter(Boolean).join(', ');
+  switch (type) {
+    case 'conversation-created':
+      return actor
+        ? `${actor} started the conversation${names ? ` with ${names}` : ''}`
+        : 'Conversation created';
+    case 'participant-added':
+      if (actor) {
+        return `${actor} added ${names || 'a participant'}${shareHistory ? ' (with history)' : ''}`;
+      }
+      return `${names || 'A participant'} joined the conversation`;
+    case 'participant-removed':
+      return actor ? `${actor} left the conversation` : 'A participant left the conversation';
+    default:
+      return 'Conversation updated';
+  }
+};
+
+const buildSystemMessage = ({ conversationId, type, actor, usernames, shareHistory, timestamp }) => ({
+  id: `system-${conversationId}-${type}-${timestamp}-${Math.random().toString(36).slice(2, 8)}`,
+  conversationId,
+  contentKeyNumber: null,
+  sender: 'System',
+  content: describeEvent({ type, actor, usernames, shareHistory }),
+  timestamp,
+  created_at: timestamp,
+  updated_at: timestamp,
+  system: true
+});
+
 export const MessagesProvider = ({ children }) => {
   const { currentSession } = useAuth();
   const { getContentKey } = useConversations();
@@ -56,6 +87,27 @@ export const MessagesProvider = ({ children }) => {
     }
   }, [appendMessage, getContentKey]);
 
+  const handleSystemNotice = useCallback((notice) => {
+    const {
+      conversation_id,
+      type,
+      actor,
+      usernames = [],
+      share_history,
+      timestamp = Date.now()
+    } = notice || {};
+    if (!conversation_id) return;
+
+    appendMessage(conversation_id, buildSystemMessage({
+      conversationId: conversation_id,
+      type,
+      actor,
+      usernames,
+      shareHistory: share_history,
+      timestamp
+    }));
+  }, [appendMessage]);
+
   const handleMessageUpdated = useCallback(async (messageData) => {
     const keyData = getContentKey(messageData.conversation_id, messageData.content_key_number);
     if (!keyData) return;
@@ -91,12 +143,14 @@ export const MessagesProvider = ({ children }) => {
     on('new-message', handleRealtimeMessage);
     on('message-updated', handleMessageUpdated);
     on('message-deleted', handleMessageDeleted);
+    on('conversation-system-message', handleSystemNotice);
     return () => {
       off('new-message', handleRealtimeMessage);
       off('message-updated', handleMessageUpdated);
       off('message-deleted', handleMessageDeleted);
+      off('conversation-system-message', handleSystemNotice);
     };
-  }, [connected, on, off, handleRealtimeMessage, handleMessageUpdated, handleMessageDeleted]);
+  }, [connected, on, off, handleRealtimeMessage, handleMessageUpdated, handleMessageDeleted, handleSystemNotice]);
 
   useEffect(() => {
     if (connected && activeConversation) joinConversation(activeConversation);
@@ -113,6 +167,23 @@ export const MessagesProvider = ({ children }) => {
       const response = await messagesAPI.getMessages(conversationId);
       const decrypted = await Promise.all(
         (response.messages || []).map(async (msg) => {
+          if (msg.event_type) {
+            let details = {};
+            try {
+              details = msg.event_details ? JSON.parse(msg.event_details) : {};
+            } catch {
+              details = {};
+            }
+            return buildSystemMessage({
+              conversationId: msg.conversation_id,
+              type: msg.event_type,
+              actor: msg.sender_username,
+              usernames: details.usernames || [],
+              shareHistory: details.share_history,
+              timestamp: msg.created_at
+            });
+          }
+
           try {
             const keyEntry = getContentKey(conversationId, msg.content_key_number);
             if (!keyEntry) return null;

@@ -50,7 +50,7 @@ Messages (Bearer token)
   - Request: { conversation_id, content_key_number, encrypted_msg_content }
   - Response 201: { message, messageData:{ id, conversation_id, content_key_number, encrypted_msg_content, sender_username, created_at, is_deleted } }
 - GET `/api/messages/:conversationId` (query: limit=50, offset=0)
-  - Response 200: { messages:[ { id, conversation_id, content_key_number, encrypted_msg_content, sender_username, created_at, updated_at, is_deleted } ], pagination:{ total, limit, offset } }
+  - Response 200: { messages:[ { id, conversation_id, content_key_number, encrypted_msg_content, sender_username, created_at, updated_at, is_deleted, event_type?, event_details? } ], pagination:{ total, limit, offset } }
 - PUT `/api/messages/:messageId`
   - Request: { encrypted_msg_content }
   - Response 200: { message, messageData:{ id, encrypted_msg_content, updated_at } }

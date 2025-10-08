@@ -171,7 +171,34 @@ const createTables = () => {
             return;
           }
           console.log('✓ Messages created_at index created');
-          resolve();
+
+          db.run(`
+            CREATE TABLE IF NOT EXISTS conversation_events (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              conversation_id INTEGER NOT NULL,
+              type TEXT NOT NULL,
+              actor_username TEXT,
+              details TEXT,
+              created_at INTEGER NOT NULL
+            )
+          `, (eventErr) => {
+            if (eventErr) {
+              console.error('Error creating conversation_events table:', eventErr);
+              reject(eventErr);
+              return;
+            }
+            db.run(`
+              CREATE INDEX IF NOT EXISTS idx_events_conversation ON conversation_events(conversation_id, created_at)
+            `, (idxErr) => {
+              if (idxErr) {
+                console.error('Error creating conversation_events index:', idxErr);
+                reject(idxErr);
+              } else {
+                console.log('✓ conversation_events table and index created');
+                resolve();
+              }
+            });
+          });
         });
       });
     });

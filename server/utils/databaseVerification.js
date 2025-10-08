@@ -42,6 +42,14 @@ const EXPECTED_TABLES = {
     'created_at',
     'updated_at',
     'is_deleted'
+  ],
+  conversation_events: [
+    'id',
+    'conversation_id',
+    'type',
+    'actor_username',
+    'details',
+    'created_at'
   ]
 };
 
@@ -51,7 +59,8 @@ const EXPECTED_INDEXES = [
   'idx_conversations_username',
   'idx_conversations_id',
   'idx_messages_conversation',
-  'idx_messages_created_at'
+  'idx_messages_created_at',
+  'idx_events_conversation'
 ];
 
 /**
@@ -275,12 +284,38 @@ export async function initializeDatabase() {
           db.close(() => reject(err));
           return;
         }
-        db.close((closeErr) => {
-          if (closeErr) {
-            reject(closeErr);
-          } else {
-            resolve(true);
+
+        db.run(`
+          CREATE TABLE IF NOT EXISTS conversation_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            conversation_id INTEGER NOT NULL,
+            type TEXT NOT NULL,
+            actor_username TEXT,
+            details TEXT,
+            created_at INTEGER NOT NULL
+          )
+        `, (eventErr) => {
+          if (eventErr) {
+            db.close(() => reject(eventErr));
+            return;
           }
+
+          db.run(`
+            CREATE INDEX IF NOT EXISTS idx_events_conversation ON conversation_events(conversation_id, created_at)
+          `, (idxErr) => {
+            if (idxErr) {
+              db.close(() => reject(idxErr));
+              return;
+            }
+
+            db.close((closeErr) => {
+              if (closeErr) {
+                reject(closeErr);
+              } else {
+                resolve(true);
+              }
+            });
+          });
         });
       });
     });

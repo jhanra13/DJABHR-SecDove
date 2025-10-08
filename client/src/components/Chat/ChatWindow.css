@@ -107,6 +107,22 @@
   color: var(--text-light);
 }
 
+.message.system .message-content {
+  justify-content: center;
+}
+
+.message.system .message-text {
+  background: transparent;
+  color: var(--text-light);
+  padding: 0;
+  text-align: center;
+  font-style: italic;
+}
+
+.message.system .message-time {
+  display: none;
+}
+
 .message.sent .message-text {
   background-color: var(--message-sent-bg);
   color: var(--text-dark);

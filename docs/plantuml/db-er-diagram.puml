@@ -39,9 +39,19 @@ entity messages {
   *is_deleted : INTEGER
 }
 
+entity conversation_events {
+  *id : INTEGER PK
+  *conversation_id : INTEGER
+  *type : TEXT
+  actor_username : TEXT
+  details : TEXT
+  *created_at : INTEGER
+}
+
 users ||--o{ contacts : has
 users ||--o{ contacts : referencedBy
 users ||--o{ conversations : participant
 conversations ||--o{ messages : contains
+conversations ||--o{ conversation_events : logs
 
 @enduml

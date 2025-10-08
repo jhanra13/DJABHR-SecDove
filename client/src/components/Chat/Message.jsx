@@ -1,21 +1,23 @@
-function Message({ text, sender, isSent, avatarUrl, time, onEdit, onDelete, edited }) {
-  const showActions = isSent && (onEdit || onDelete);
+function Message({ text, sender, isSent, avatarUrl, time, onEdit, onDelete, edited, system }) {
+  const showActions = isSent && !system && (onEdit || onDelete);
   return (
-    <div className={`message ${isSent ? 'sent' : ''}`}>
+    <div className={`message ${isSent ? 'sent' : ''} ${system ? 'system' : ''}`}>
       <div className="message-content">
-        <div
-          className="message-avatar"
-          style={{ backgroundImage: `url(${avatarUrl})` }}
-        />
+        {!system && (
+          <div
+            className="message-avatar"
+            style={{ backgroundImage: `url(${avatarUrl})` }}
+          />
+        )}
         <div className="message-body">
-          {!isSent && sender && (
+          {!system && !isSent && sender && (
             <div className="message-sender">{sender}</div>
           )}
-          <div className="message-text">
+          <div className={`message-text${system ? ' system' : ''}`}>
             {text}
             {edited && <span className="message-edited">(edited)</span>}
           </div>
-          <span className="message-time">{time}</span>
+          {!system && <span className="message-time">{time}</span>}
           {showActions && (
             <div className="message-actions">
               {onEdit && (
