@@ -1,3 +1,5 @@
+import UserPlusIcon from '../icons/UserPlusIcon';
+
 const buttonStyle = {
   background: 'linear-gradient(to right, #4768b5, #35488e)',
   color: 'white',
@@ -24,19 +26,13 @@ const PlusIcon = () => (
   </svg>
 );
 
-const AddUserIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-    <path d="M15 14a4 4 0 1 0-6 0C6 14 2 15 2 18v2h14v-2c0-3-4-4-1-4zM20 8h-2V6h-2v2h-2v2h2v2h2v-2h2z" />
-  </svg>
-);
-
 const DotsIcon = ({ className, style }) => (
   <svg className={className} style={style} width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
     <path d="M5 12a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm7 0a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm7 0a2 2 0 1 1 0-4 2 2 0 0 1 0 4z" />
   </svg>
 );
 
-function ChatHeader({ discussion, onNewConversation, onAddParticipant }) {
+function ChatHeader({ discussion, onNewConversation, onAddParticipant, onLeaveConversation }) {
   const handleMouseEnter = (event) => {
     event.currentTarget.style.transform = 'scale(1.05)';
     event.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.2)';
@@ -59,7 +55,24 @@ function ChatHeader({ discussion, onNewConversation, onAddParticipant }) {
         onMouseLeave={handleMouseLeave}
         title="Add participant"
       >
-        <AddUserIcon />
+        <UserPlusIcon size={16} />
+      </button>
+    );
+  }
+
+  if (discussion && onLeaveConversation) {
+    actions.push(
+      <button
+        key="leave"
+        onClick={() => onLeaveConversation(discussion)}
+        style={{ ...buttonStyle, background: '#f25f5c' }}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        title="Leave conversation"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M10 2H4a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h6v-2H4V4h6zM21 12l-5-5v3h-6v4h6v3z" />
+        </svg>
       </button>
     );
   }
@@ -73,8 +86,8 @@ function ChatHeader({ discussion, onNewConversation, onAddParticipant }) {
       onMouseLeave={handleMouseLeave}
       title="New conversation"
     >
-      <PlusIcon />
-    </button>
+        <PlusIcon />
+      </button>
   );
 
   return (

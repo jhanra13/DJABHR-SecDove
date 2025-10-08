@@ -71,6 +71,16 @@ async function getLatestUserKey(conversationId, username) {
   return row?.max_key ?? null;
 }
 
+async function getConversationLatestKey(conversationId) {
+  const row = await get(
+    `SELECT MAX(content_key_number) as max_key
+     FROM conversations
+     WHERE id = ?`,
+    [conversationId]
+  );
+  return row?.max_key ?? null;
+}
+
 // GET /api/conversations - Get all conversations for current user
 router.get('/', authenticateToken, async (req, res) => {
   try {
@@ -195,44 +205,80 @@ router.post('/:conversationId/participants', authenticateToken, async (req, res)
 
     const timestamp = Date.now();
 
-    const validateEntry = async (entry) => {
-      if (!entry?.username || typeof entry.username !== 'string' || !entry.encrypted_content_key) {
+    const validateEntry = async (entry, { requireEncryptedKey = true, requireKeys = false } = {}) => {
+      if (!entry?.username || typeof entry.username !== 'string') {
         throw new Error('Invalid participant entry');
       }
       const userExists = await get('SELECT id FROM users WHERE username = ?', [entry.username]);
       if (!userExists) {
         throw new Error(`User ${entry.username} not found`);
       }
+      if (requireEncryptedKey && !entry.encrypted_content_key) {
+        throw new Error('Encrypted content key required');
+      }
+      if (requireKeys) {
+        if (!Array.isArray(entry.keys) || entry.keys.length === 0) {
+          throw new Error('keys array required when sharing history');
+        }
+        for (const keyEntry of entry.keys) {
+          if (typeof keyEntry?.content_key_number !== 'number' || !keyEntry?.encrypted_content_key) {
+            throw new Error('Invalid key entry format');
+          }
+        }
+      }
     };
 
     if (share_history) {
+      const allowedKeys = await all(
+        `SELECT content_key_number, MIN(created_at) AS created_at
+         FROM conversations
+         WHERE id = ?
+         GROUP BY content_key_number`,
+        [conversationId]
+      );
+
+      if (allowedKeys.length === 0) {
+        return res.status(400).json({ error: 'Conversation has no key history' });
+      }
+
+      const allowedMap = new Map();
+      allowedKeys.forEach(row => {
+        allowedMap.set(row.content_key_number, row.created_at);
+      });
+
       for (const entry of entries) {
         try {
-          await validateEntry(entry);
+          await validateEntry(entry, { requireEncryptedKey: false, requireKeys: true });
         } catch (err) {
           return res.status(400).json({ error: err.message });
         }
 
-        const alreadyParticipant = await get(
-          `SELECT 1 FROM conversations WHERE id = ? AND content_key_number = ? AND username = ?`,
-          [conversationId, latestKeyNumber, entry.username]
-        );
+        for (const keyEntry of entry.keys) {
+          const keyNumber = keyEntry?.content_key_number;
+          const encryptedKey = keyEntry?.encrypted_content_key;
 
-        if (alreadyParticipant) {
-          continue;
+          if (!allowedMap.has(keyNumber)) {
+            return res.status(400).json({ error: `Unknown content key number ${keyNumber}` });
+          }
+
+          const alreadyParticipant = await get(
+            `SELECT 1 FROM conversations WHERE id = ? AND content_key_number = ? AND username = ?`,
+            [conversationId, keyNumber, entry.username]
+          );
+
+          if (alreadyParticipant) continue;
+
+          await run(
+            `INSERT INTO conversations (id, content_key_number, username, encrypted_content_key, created_at)
+             VALUES (?, ?, ?, ?, ?)`,
+            [conversationId, keyNumber, entry.username, encryptedKey, allowedMap.get(keyNumber) ?? timestamp]
+          );
         }
-
-        await run(
-          `INSERT INTO conversations (id, content_key_number, username, encrypted_content_key, created_at)
-           VALUES (?, ?, ?, ?, ?)`,
-          [conversationId, latestKeyNumber, entry.username, entry.encrypted_content_key, timestamp]
-        );
       }
 
       return res.json({
         message: 'Participants added with existing history',
         share_history: true,
-        content_key_number: latestKeyNumber,
         participants: entries.map(e => e.username)
       });
     }
@@ -248,7 +294,7 @@ router.post('/:conversationId/participants', authenticateToken, async (req, res)
     const uniqueUsernames = new Set();
     for (const entry of entries) {
       try {
-        await validateEntry(entry);
+        await validateEntry(entry, { requireEncryptedKey: true });
       } catch (err) {
         return res.status(400).json({ error: err.message });
       }
@@ -285,17 +331,20 @@ router.delete('/:conversationId', authenticateToken, async (req, res) => {
     const { conversationId } = req.params;
     const username = req.user.username;
 
-    // Verify user is part of the conversation
-    const userEntry = await get(
-      'SELECT id FROM conversations WHERE id = ? AND username = ?',
-      [conversationId, username]
-    );
-
-    if (!userEntry) {
+    const latestGlobalKey = await getConversationLatestKey(conversationId);
+    if (latestGlobalKey === null) {
       return res.status(404).json({ error: 'Conversation not found' });
     }
 
-    // Delete user's conversation entries
+    const latestUserKey = await getLatestUserKey(conversationId, username);
+    if (latestUserKey === null) {
+      return res.status(404).json({ error: 'Conversation not found' });
+    }
+
+    if (latestUserKey !== latestGlobalKey) {
+      return res.status(400).json({ error: 'Rotate to the latest key before leaving' });
+    }
+
     await run(
       'DELETE FROM conversations WHERE id = ? AND username = ?',
       [conversationId, username]

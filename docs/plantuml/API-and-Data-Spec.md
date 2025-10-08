@@ -36,10 +36,14 @@ Conversations (Bearer token)
 - GET `/api/conversations/:conversationId`
   - Response 200: { conversation:{ id, content_key_number, encrypted_content_key, participants[], created_at, keys:[...] } }
 - DELETE `/api/conversations/:conversationId`
+  - Removes only the requester’s membership (conversation remains for others)
+  - Requires the user to have the latest content key
   - Response 200: { message }
 - POST `/api/conversations/:conversationId/participants`
-  - Request: { share_history: boolean, entries:[ { username, encrypted_content_key } ], content_key_number? (required when share_history=false) }
-  - Response 200: { message, share_history, content_key_number, participants[] }
+  - Request:
+    - share_history = true → { share_history: true, entries:[ { username, keys:[ { content_key_number, encrypted_content_key } ] } ] }
+    - share_history = false → { share_history: false, content_key_number, entries:[ { username, encrypted_content_key } ] }
+  - Response 200: { message, share_history, (content_key_number when rotated), participants[] }
 
 Messages (Bearer token)
 - POST `/api/messages`

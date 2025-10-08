@@ -225,6 +225,25 @@ export const ConversationsProvider = ({ children }) => {
     return null;
   };
 
+  const leaveConversation = async (conversationId) => {
+    if (!currentSession) throw new Error('Not authenticated');
+    setError(null);
+    try {
+      await conversationsAPI.deleteConversation(conversationId);
+      setConversations(prev => prev.filter(convo => convo.id !== conversationId));
+      setContentKeyCache(prev => {
+        const copy = { ...prev };
+        delete copy[conversationId];
+        return copy;
+      });
+      return { success: true };
+    } catch (err) {
+      const errorMsg = err.response?.data?.error || err.message;
+      setError(errorMsg);
+      throw new Error(errorMsg);
+    }
+  };
+
   // Get conversation by ID
   const getConversation = (conversationId) => {
     return conversations.find(c => c.id === conversationId);
@@ -242,15 +261,28 @@ export const ConversationsProvider = ({ children }) => {
       }
 
       if (shareHistory) {
-        const keyData = getContentKey(conversationId);
-        if (!keyData) throw new Error('No content key available');
+        const cacheEntry = contentKeyCache[conversationId];
+        if (!cacheEntry || !cacheEntry.keys) throw new Error('No content key history available');
         const publicKeyHex = await getPublicKeyHex(username);
         const publicKey = await importPublicKey(publicKeyHex);
-        const encryptedContentKey = await encryptContentKey(keyData.key, publicKey);
+        const keyNumbers = Object.keys(cacheEntry.keys)
+          .map(Number)
+          .sort((a, b) => a - b);
+
+        if (keyNumbers.length === 0) {
+          throw new Error('No content key available');
+        }
+
+        const keysPayload = await Promise.all(
+          keyNumbers.map(async (number) => ({
+            content_key_number: number,
+            encrypted_content_key: await encryptContentKey(cacheEntry.keys[number], publicKey)
+          }))
+        );
 
         await conversationsAPI.addParticipants(conversationId, {
           share_history: true,
-          entries: [{ username, encrypted_content_key: encryptedContentKey }]
+          entries: [{ username, keys: keysPayload }]
         });
 
         setConversations(prev => prev.map(convo =>
@@ -356,6 +388,7 @@ export const ConversationsProvider = ({ children }) => {
     getContentKey,
     getConversation,
     deleteConversation,
+    leaveConversation,
     addParticipant
   };
 

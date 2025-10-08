@@ -23,10 +23,10 @@ function AppContainer() {
     const [participantLoading, setParticipantLoading] = useState(false);
     const { currentView } = useViewContext();
     const { currentSession } = useAuth();
-    const { addParticipant } = useConversations();
+    const { addParticipant: addConversationParticipant, leaveConversation } = useConversations();
     
     // Get messages context
-    const { getMessages, loadMessages, sendMessage, loading: messagesLoading, error: messagesError } = useMessages();
+    const { getMessages, loadMessages, sendMessage, clearMessages, loading: messagesLoading, error: messagesError } = useMessages();
     
     // Get messages for the active discussion
     const messages = activeDiscussion ? getMessages(activeDiscussion.id) : [];
@@ -74,12 +74,25 @@ function AppContainer() {
         setParticipantLoading(true);
         setParticipantError('');
         try {
-            await addParticipant(participantTarget.id, username, shareHistory);
+            await addConversationParticipant(participantTarget.id, username, shareHistory);
             handleParticipantModalClose();
         } catch (err) {
             setParticipantError(err.message);
         } finally {
             setParticipantLoading(false);
+        }
+    };
+
+    const handleLeaveConversation = async (conversation) => {
+        if (!conversation) return;
+        const confirmed = window.confirm('Leave this conversation? You will lose access unless re-added.');
+        if (!confirmed) return;
+        try {
+            await leaveConversation(conversation.id);
+            clearMessages(conversation.id);
+            setActiveDiscussion(null);
+        } catch (err) {
+            window.alert(err.message || 'Failed to leave conversation');
         }
     };
 
@@ -101,6 +114,7 @@ function AppContainer() {
                             error={messagesError}
                             onNewConversation={() => setShowNewConversation(true)}
                             onAddParticipant={handleOpenAddParticipant}
+                            onLeaveConversation={handleLeaveConversation}
                         />
                     </>
                 );

@@ -3,8 +3,7 @@ import './DiscussionsList.css';
 import SearchBar from './SearchBar';
 import DiscussionItem from './DiscussionItem';
 import { useConversations } from '../../context/ConversationsContext';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUserPlus } from '@fortawesome/free-solid-svg-icons';
+import UserPlusIcon from '../icons/UserPlusIcon';
 
 export default function DiscussionsList({ activeDiscussion, onDiscussionSelect, onAddContact }) {
     const [searchQuery, setSearchQuery] = useState('');
@@ -44,7 +43,7 @@ export default function DiscussionsList({ activeDiscussion, onDiscussionSelect, 
                     }}
                     title="Add Contact"
                 >
-                    <FontAwesomeIcon icon={faUserPlus} />
+                    <UserPlusIcon size={18} />
                 </button>
             </div>
             {loading ? (

@@ -193,7 +193,7 @@ export async function importContentKey(contentKeyHex) {
       name: 'AES-GCM',
       length: 256
     },
-    false, // not extractable
+    true, // extractable so it can be re-wrapped for other participants
     ['encrypt', 'decrypt']
   );
 }
