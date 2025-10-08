@@ -8,6 +8,7 @@ const router = express.Router();
 router.post('/', authenticateToken, async (req, res) => {
   try {
     const { conversation_entries } = req.body;
+    const io = req.app.get('io');
 
     // Validate required fields
     if (!conversation_entries || !Array.isArray(conversation_entries) || conversation_entries.length === 0) {
@@ -45,6 +46,13 @@ router.post('/', authenticateToken, async (req, res) => {
       );
     }
 
+    const participantUsernames = Array.from(new Set(conversation_entries.map(entry => entry.username)));
+    await broadcastToParticipants(conversationId, io, 'conversation-created', {
+      participants: participantUsernames,
+      content_key_number: contentKeyNumber,
+      initiated_by: currentUsername
+    });
+
     res.status(201).json({
       message: 'Conversation created successfully',
       conversation: {
@@ -79,6 +87,17 @@ async function getConversationLatestKey(conversationId) {
     [conversationId]
   );
   return row?.max_key ?? null;
+}
+
+async function broadcastToParticipants(conversationId, io, event, payload = {}) {
+  if (!io) return;
+  const participants = await all(
+    'SELECT DISTINCT username FROM conversations WHERE id = ?',
+    [conversationId]
+  );
+  participants.forEach(({ username }) => {
+    io.to(`user:${username}`).emit(event, { conversationId, ...payload });
+  });
 }
 
 // GET /api/conversations - Get all conversations for current user
@@ -191,6 +210,7 @@ router.post('/:conversationId/participants', authenticateToken, async (req, res)
   try {
     const { conversationId } = req.params;
     const { share_history, entries, content_key_number } = req.body;
+    const io = req.app.get('io');
 
     if (!Array.isArray(entries) || entries.length === 0) {
       return res.status(400).json({ error: 'Participant entries are required' });
@@ -276,10 +296,17 @@ router.post('/:conversationId/participants', authenticateToken, async (req, res)
         }
       }
 
+      const newUsernames = entries.map(e => e.username);
+      await broadcastToParticipants(conversationId, io, 'conversation-participants-added', {
+        usernames: newUsernames,
+        share_history: true
+      });
+      await broadcastToParticipants(conversationId, io, 'conversation-updated');
+
       return res.json({
         message: 'Participants added with existing history',
         share_history: true,
-        participants: entries.map(e => e.username)
+        participants: newUsernames
       });
     }
 
@@ -313,6 +340,16 @@ router.post('/:conversationId/participants', authenticateToken, async (req, res)
       );
     }
 
+    const allUsernames = Array.from(new Set(entries.map(entry => entry.username)));
+    await broadcastToParticipants(conversationId, io, 'conversation-key-rotated', {
+      content_key_number: newKeyNumber
+    });
+    await broadcastToParticipants(conversationId, io, 'conversation-participants-added', {
+      usernames: allUsernames,
+      share_history: false
+    });
+    await broadcastToParticipants(conversationId, io, 'conversation-updated');
+
     return res.json({
       message: 'Conversation key rotated',
       share_history: false,
@@ -330,6 +367,7 @@ router.delete('/:conversationId', authenticateToken, async (req, res) => {
   try {
     const { conversationId } = req.params;
     const username = req.user.username;
+    const io = req.app.get('io');
 
     const latestGlobalKey = await getConversationLatestKey(conversationId);
     if (latestGlobalKey === null) {
@@ -349,6 +387,11 @@ router.delete('/:conversationId', authenticateToken, async (req, res) => {
       'DELETE FROM conversations WHERE id = ? AND username = ?',
       [conversationId, username]
     );
+
+    await broadcastToParticipants(conversationId, io, 'conversation-participants-removed', {
+      usernames: [username]
+    });
+    await broadcastToParticipants(conversationId, io, 'conversation-updated');
 
     res.json({ message: 'Conversation deleted successfully' });
   } catch (error) {

@@ -33,6 +33,7 @@ entity messages {
   *conversation_id : INTEGER
   *content_key_number : INTEGER
   *encrypted_msg_content : TEXT
+  *sender_username : TEXT
   *created_at : INTEGER
   *updated_at : INTEGER?
   *is_deleted : INTEGER
@@ -44,4 +45,3 @@ users ||--o{ conversations : participant
 conversations ||--o{ messages : contains
 
 @enduml
-

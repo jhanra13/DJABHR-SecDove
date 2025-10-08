@@ -28,9 +28,9 @@ router.post('/', authenticateToken, async (req, res) => {
     // Insert message
     const timestamp = Date.now();
     const result = await run(
-      `INSERT INTO messages (conversation_id, content_key_number, encrypted_msg_content, created_at, is_deleted)
-       VALUES (?, ?, ?, ?, 0)`,
-      [conversation_id, content_key_number, encrypted_msg_content, timestamp]
+      `INSERT INTO messages (conversation_id, content_key_number, encrypted_msg_content, sender_username, created_at, is_deleted)
+       VALUES (?, ?, ?, ?, ?, 0)`,
+      [conversation_id, content_key_number, encrypted_msg_content, username, timestamp]
     );
 
     const messageData = {
@@ -38,6 +38,7 @@ router.post('/', authenticateToken, async (req, res) => {
       conversation_id,
       content_key_number,
       encrypted_msg_content,
+      sender_username: username,
       created_at: timestamp,
       is_deleted: 0
     };
@@ -90,7 +91,7 @@ router.get('/:conversationId', authenticateToken, async (req, res) => {
 
     // Get messages (excluding deleted ones)
     const messages = await all(
-      `SELECT id, conversation_id, content_key_number, encrypted_msg_content, created_at, updated_at, is_deleted
+      `SELECT id, conversation_id, content_key_number, encrypted_msg_content, sender_username, created_at, updated_at, is_deleted
        FROM messages
        WHERE conversation_id = ? AND is_deleted = 0
        ORDER BY created_at ASC
@@ -132,12 +133,16 @@ router.put('/:messageId', authenticateToken, async (req, res) => {
 
     // Get message and verify it exists
     const message = await get(
-      'SELECT id, conversation_id FROM messages WHERE id = ?',
+      'SELECT id, conversation_id, sender_username, content_key_number FROM messages WHERE id = ?',
       [messageId]
     );
 
     if (!message) {
       return res.status(404).json({ error: 'Message not found' });
+    }
+
+    if (message.sender_username && message.sender_username !== username) {
+      return res.status(403).json({ error: 'Not allowed to modify this message' });
     }
 
     // Verify user is part of the conversation
@@ -156,6 +161,17 @@ router.put('/:messageId', authenticateToken, async (req, res) => {
       'UPDATE messages SET encrypted_msg_content = ?, updated_at = ? WHERE id = ?',
       [encrypted_msg_content, timestamp, messageId]
     );
+
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`conversation:${message.conversation_id}`).emit('message-updated', {
+        id: parseInt(messageId, 10),
+        conversation_id: message.conversation_id,
+        content_key_number: message.content_key_number,
+        encrypted_msg_content,
+        updated_at: timestamp
+      });
+    }
 
     res.json({
       message: 'Message updated successfully',
@@ -179,12 +195,16 @@ router.delete('/:messageId', authenticateToken, async (req, res) => {
 
     // Get message and verify it exists
     const message = await get(
-      'SELECT id, conversation_id FROM messages WHERE id = ?',
+      'SELECT id, conversation_id, sender_username FROM messages WHERE id = ?',
       [messageId]
     );
 
     if (!message) {
       return res.status(404).json({ error: 'Message not found' });
+    }
+
+    if (message.sender_username && message.sender_username !== username) {
+      return res.status(403).json({ error: 'Not allowed to delete this message' });
     }
 
     // Verify user is part of the conversation
@@ -202,6 +222,14 @@ router.delete('/:messageId', authenticateToken, async (req, res) => {
       'UPDATE messages SET is_deleted = 1 WHERE id = ?',
       [messageId]
     );
+
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`conversation:${message.conversation_id}`).emit('message-deleted', {
+        id: parseInt(messageId, 10),
+        conversation_id: message.conversation_id
+      });
+    }
 
     res.json({ message: 'Message deleted successfully' });
   } catch (error) {

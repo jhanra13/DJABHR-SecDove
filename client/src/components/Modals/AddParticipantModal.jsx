@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import './Modal.css';
+import { useContacts } from '../../context/ContactsContext';
 
 function AddParticipantModal({
   isOpen,
@@ -9,13 +10,24 @@ function AddParticipantModal({
   error = '',
   conversation
 }) {
-  const [username, setUsername] = useState('');
+  const { contacts } = useContacts();
+  const [selectedContacts, setSelectedContacts] = useState([]);
   const [shareHistory, setShareHistory] = useState(true);
   const [localError, setLocalError] = useState('');
 
+  const existingParticipants = useMemo(
+    () => new Set(conversation?.participants || []),
+    [conversation?.participants]
+  );
+
+  const availableContacts = useMemo(
+    () => contacts.filter(contact => !existingParticipants.has(contact.contact_username)),
+    [contacts, existingParticipants]
+  );
+
   useEffect(() => {
     if (isOpen) {
-      setUsername('');
+      setSelectedContacts([]);
       setShareHistory(true);
       setLocalError('');
     }
@@ -23,17 +35,25 @@ function AddParticipantModal({
 
   if (!isOpen) return null;
 
+  const toggleContact = (username) => {
+    setSelectedContacts(prev =>
+      prev.includes(username)
+        ? prev.filter(u => u !== username)
+        : [...prev, username]
+    );
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (!username.trim()) {
-      setLocalError('Username is required');
+    if (selectedContacts.length === 0) {
+      setLocalError('Select at least one contact');
       return;
     }
     setLocalError('');
     try {
-      await onSubmit({ username: username.trim(), shareHistory });
+      await onSubmit({ usernames: selectedContacts, shareHistory });
     } catch {
-      // Parent handles error display via props
+      // parent handles error display
     }
   };
 
@@ -48,16 +68,75 @@ function AddParticipantModal({
         </div>
         <form className="modal-form" onSubmit={handleSubmit}>
           <div className="form-group">
-            <label htmlFor="participant-username">Username</label>
-            <input
-              id="participant-username"
-              type="text"
-              placeholder="Enter username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              disabled={loading}
-              autoFocus
-            />
+            <label>Select Contacts</label>
+            {availableContacts.length === 0 ? (
+              <div style={{
+                padding: '20px',
+                textAlign: 'center',
+                color: '#999',
+                backgroundColor: '#f5f5f5',
+                borderRadius: '8px',
+                marginTop: '10px'
+              }}>
+                No additional contacts available.
+              </div>
+            ) : (
+              <div style={{
+                maxHeight: '300px',
+                overflowY: 'auto',
+                border: '1px solid #E0E0E0',
+                borderRadius: '8px',
+                padding: '10px',
+                marginTop: '10px'
+              }}>
+                {availableContacts.map(contact => (
+                  <label
+                    key={contact.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      padding: '10px',
+                      cursor: 'pointer',
+                      borderRadius: '6px',
+                      transition: 'background-color 0.2s',
+                      marginBottom: '5px'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!loading) e.currentTarget.style.backgroundColor = '#f5f5f5';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedContacts.includes(contact.contact_username)}
+                      onChange={() => toggleContact(contact.contact_username)}
+                      disabled={loading}
+                      style={{
+                        marginRight: '10px',
+                        width: '18px',
+                        height: '18px',
+                        cursor: 'pointer'
+                      }}
+                    />
+                    <span style={{ fontSize: '14px' }}>{contact.contact_username}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+            {selectedContacts.length > 0 && (
+              <div style={{
+                marginTop: '10px',
+                padding: '10px',
+                backgroundColor: '#E3F2FD',
+                borderRadius: '6px',
+                fontSize: '13px',
+                color: '#1976D2'
+              }}>
+                {selectedContacts.length} contact(s) selected
+              </div>
+            )}
           </div>
 
           <div className="form-group">
@@ -99,7 +178,11 @@ function AddParticipantModal({
             >
               Cancel
             </button>
-            <button type="submit" className="modal-button" disabled={loading}>
+            <button
+              type="submit"
+              className="modal-button"
+              disabled={loading || availableContacts.length === 0}
+            >
               {loading ? 'Adding...' : 'Add Participant'}
             </button>
           </div>

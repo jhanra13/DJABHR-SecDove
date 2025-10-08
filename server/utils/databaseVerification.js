@@ -38,6 +38,7 @@ const EXPECTED_TABLES = {
     'conversation_id',
     'content_key_number',
     'encrypted_msg_content',
+    'sender_username',
     'created_at',
     'updated_at',
     'is_deleted'
@@ -254,6 +255,7 @@ export async function initializeDatabase() {
           conversation_id INTEGER NOT NULL,
           content_key_number INTEGER NOT NULL,
           encrypted_msg_content TEXT NOT NULL,
+          sender_username TEXT,
           created_at INTEGER NOT NULL,
           updated_at INTEGER,
           is_deleted INTEGER DEFAULT 0
@@ -266,10 +268,16 @@ export async function initializeDatabase() {
 
       db.run(`
         CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages(created_at)
-      `, (err) => {
+      `);
+
+      db.run(`ALTER TABLE messages ADD COLUMN sender_username TEXT`, (err) => {
+        if (err && !err.message.includes('duplicate column')) {
+          db.close(() => reject(err));
+          return;
+        }
         db.close((closeErr) => {
-          if (err || closeErr) {
-            reject(err || closeErr);
+          if (closeErr) {
+            reject(closeErr);
           } else {
             resolve(true);
           }

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { conversationsAPI, contactsAPI } from '../utils/api';
 import { useAuth } from './AuthContext';
 import {
@@ -7,6 +7,7 @@ import {
   decryptContentKey,
   importPublicKey
 } from '../utils/crypto';
+import { useWebSocket } from './WebSocketContext';
 
 const ConversationsContext = createContext();
 
@@ -25,6 +26,7 @@ const buildDisplayName = (participants, username) => {
 
 export const ConversationsProvider = ({ children }) => {
   const { currentSession } = useAuth();
+  const { on, off } = useWebSocket();
   const [conversations, setConversations] = useState([]);
   const [contentKeyCache, setContentKeyCache] = useState({}); // { id: { latest, keys: { [number]: CryptoKey } } }
   const [loading, setLoading] = useState(false);
@@ -32,40 +34,25 @@ export const ConversationsProvider = ({ children }) => {
   const publicKeyCache = useRef(new Map());
 
   // Load conversations when authenticated
-  useEffect(() => {
-    if (currentSession?.privateKey) {
-      loadConversations();
-    } else {
-      setConversations([]);
-      setContentKeyCache({});
-      publicKeyCache.current.clear();
-    }
-  }, [currentSession]);
-
-  const getPublicKeyHex = async (username) => {
-    if (username === currentSession.username) return currentSession.publicKey;
-    if (publicKeyCache.current.has(username)) {
-      return publicKeyCache.current.get(username);
-    }
-    const response = await contactsAPI.getPublicKey(username);
-    publicKeyCache.current.set(username, response.public_key);
-    return response.public_key;
+  const resetState = () => {
+    setConversations([]);
+    setContentKeyCache({});
+    publicKeyCache.current.clear();
   };
 
-  // Load and decrypt conversations
-  const loadConversations = async () => {
+  const loadConversations = useCallback(async () => {
     if (!currentSession?.privateKey) return;
-    
+
     setLoading(true);
     setError(null);
-    
+
     try {
       const response = await conversationsAPI.getConversations();
       const convos = response.conversations || [];
-      
+
       const cache = {};
       const formattedConvos = [];
-      
+
       for (const convo of convos) {
         const keyEntries = Array.isArray(convo.keys) && convo.keys.length
           ? convo.keys
@@ -106,6 +93,34 @@ export const ConversationsProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
+  }, [currentSession?.privateKey, currentSession?.username]);
+
+  useEffect(() => {
+    if (currentSession?.privateKey) {
+      loadConversations();
+    } else {
+      resetState();
+    }
+  }, [currentSession, loadConversations]);
+
+  useEffect(() => {
+    if (!currentSession?.privateKey) return undefined;
+    const refresh = () => loadConversations();
+    const events = ['conversation-created', 'conversation-updated', 'conversation-participants-added', 'conversation-participants-removed', 'conversation-key-rotated', 'conversation-joined'];
+    events.forEach(event => on(event, refresh));
+    return () => {
+      events.forEach(event => off(event, refresh));
+    };
+  }, [currentSession?.privateKey, on, off, loadConversations]);
+
+  const getPublicKeyHex = async (username) => {
+    if (username === currentSession.username) return currentSession.publicKey;
+    if (publicKeyCache.current.has(username)) {
+      return publicKeyCache.current.get(username);
+    }
+    const response = await contactsAPI.getPublicKey(username);
+    publicKeyCache.current.set(username, response.public_key);
+    return response.public_key;
   };
 
   // Phase 3.3: Create conversation with content key encryption
@@ -249,52 +264,54 @@ export const ConversationsProvider = ({ children }) => {
     return conversations.find(c => c.id === conversationId);
   };
 
-  const addParticipant = async (conversationId, username, shareHistory) => {
+  const addParticipants = async (conversationId, usernames, shareHistory) => {
     if (!currentSession?.privateKey) throw new Error('Not authenticated');
 
     setError(null);
 
     try {
       const targetConversation = conversations.find(c => c.id === conversationId);
-      if (!targetConversation) {
-        throw new Error('Conversation not found');
-      }
+      if (!targetConversation) throw new Error('Conversation not found');
+
+      const uniqueNewUsers = Array.from(new Set((usernames || []).filter(Boolean)));
+      if (uniqueNewUsers.length === 0) throw new Error('Select at least one contact');
 
       if (shareHistory) {
         const cacheEntry = contentKeyCache[conversationId];
         if (!cacheEntry || !cacheEntry.keys) throw new Error('No content key history available');
-        const publicKeyHex = await getPublicKeyHex(username);
-        const publicKey = await importPublicKey(publicKeyHex);
-        const keyNumbers = Object.keys(cacheEntry.keys)
-          .map(Number)
-          .sort((a, b) => a - b);
+        const keyNumbers = Object.keys(cacheEntry.keys).map(Number).sort((a, b) => a - b);
+        if (keyNumbers.length === 0) throw new Error('No content key available');
 
-        if (keyNumbers.length === 0) {
-          throw new Error('No content key available');
-        }
-
-        const keysPayload = await Promise.all(
-          keyNumbers.map(async (number) => ({
-            content_key_number: number,
-            encrypted_content_key: await encryptContentKey(cacheEntry.keys[number], publicKey)
-          }))
+        const entries = await Promise.all(
+          uniqueNewUsers.map(async (username) => {
+            const publicKeyHex = await getPublicKeyHex(username);
+            const publicKey = await importPublicKey(publicKeyHex);
+            const keys = await Promise.all(
+              keyNumbers.map(async (number) => ({
+                content_key_number: number,
+                encrypted_content_key: await encryptContentKey(cacheEntry.keys[number], publicKey)
+              }))
+            );
+            return { username, keys };
+          })
         );
 
         await conversationsAPI.addParticipants(conversationId, {
           share_history: true,
-          entries: [{ username, keys: keysPayload }]
+          entries
         });
 
         setConversations(prev => prev.map(convo =>
           convo.id === conversationId
             ? {
                 ...convo,
-                participants: Array.from(new Set([...(convo.participants || []), username])),
-                name: buildDisplayName([...(convo.participants || []), username], currentSession.username)
+                participants: Array.from(new Set([...(convo.participants || []), ...uniqueNewUsers])),
+                name: buildDisplayName([...(convo.participants || []), ...uniqueNewUsers], currentSession.username)
               }
             : convo
         ));
 
+        await loadConversations();
         return { success: true };
       }
 
@@ -303,7 +320,7 @@ export const ConversationsProvider = ({ children }) => {
       const newKeyNumber = latestNumber + 1;
       const newContentKey = await generateContentKey();
 
-      const participantSet = new Set([...(targetConversation.participants || []), username]);
+      const participantSet = new Set([...(targetConversation.participants || []), ...uniqueNewUsers]);
       const entries = [];
 
       for (const participant of participantSet) {
@@ -344,6 +361,7 @@ export const ConversationsProvider = ({ children }) => {
           : convo
       ));
 
+      await loadConversations();
       return { success: true };
     } catch (err) {
       const errorMsg = err.response?.data?.error || err.message;
@@ -389,7 +407,7 @@ export const ConversationsProvider = ({ children }) => {
     getConversation,
     deleteConversation,
     leaveConversation,
-    addParticipant
+    addParticipants
   };
 
   return (

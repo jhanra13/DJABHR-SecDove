@@ -48,18 +48,55 @@ export const MessagesProvider = ({ children }) => {
         content: decrypted.content,
         timestamp: decrypted.timestamp,
         created_at: messageData.created_at,
-        updated_at: messageData.updated_at
+        updated_at: messageData.updated_at,
+        edited: Boolean(decrypted.edited) || Boolean(messageData.updated_at)
       });
     } catch {
       /* ignore decryption errors */
     }
   }, [appendMessage, getContentKey]);
 
+  const handleMessageUpdated = useCallback(async (messageData) => {
+    const keyData = getContentKey(messageData.conversation_id, messageData.content_key_number);
+    if (!keyData) return;
+    try {
+      const decrypted = await decryptMessage(messageData.encrypted_msg_content, keyData.key);
+      setMessages(prev => ({
+        ...prev,
+        [messageData.conversation_id]: (prev[messageData.conversation_id] || []).map(msg =>
+          msg.id === messageData.id
+            ? {
+                ...msg,
+                content: decrypted.content,
+                edited: true,
+                updated_at: messageData.updated_at
+              }
+            : msg
+        )
+      }));
+    } catch {
+      // ignore
+    }
+  }, [getContentKey]);
+
+  const handleMessageDeleted = useCallback((messageData) => {
+    setMessages(prev => ({
+      ...prev,
+      [messageData.conversation_id]: (prev[messageData.conversation_id] || []).filter(msg => msg.id !== messageData.id)
+    }));
+  }, []);
+
   useEffect(() => {
     if (!connected) return undefined;
     on('new-message', handleRealtimeMessage);
-    return () => off('new-message', handleRealtimeMessage);
-  }, [connected, on, off, handleRealtimeMessage]);
+    on('message-updated', handleMessageUpdated);
+    on('message-deleted', handleMessageDeleted);
+    return () => {
+      off('new-message', handleRealtimeMessage);
+      off('message-updated', handleMessageUpdated);
+      off('message-deleted', handleMessageDeleted);
+    };
+  }, [connected, on, off, handleRealtimeMessage, handleMessageUpdated, handleMessageDeleted]);
 
   useEffect(() => {
     if (connected && activeConversation) joinConversation(activeConversation);
@@ -88,7 +125,8 @@ export const MessagesProvider = ({ children }) => {
               content: payload.content,
               timestamp: payload.timestamp,
               created_at: msg.created_at,
-              updated_at: msg.updated_at
+              updated_at: msg.updated_at,
+              edited: Boolean(payload.edited) || Boolean(msg.updated_at)
             };
           } catch {
             return null;
@@ -145,14 +183,16 @@ export const MessagesProvider = ({ children }) => {
     if (!currentSession) throw new Error('Not authenticated');
     const existingMessages = messages[conversationId] || [];
     const targetMessage = existingMessages.find(msg => msg.id === messageId);
-    const keyData = getContentKey(conversationId, targetMessage?.contentKeyNumber);
+    if (!targetMessage) throw new Error('Message not found');
+    const keyData = getContentKey(conversationId, targetMessage.contentKeyNumber);
     if (!keyData) throw new Error('No content key for conversation');
     setError(null);
     try {
       const encrypted = await encryptMessage({
         sender: currentSession.username,
-        timestamp: Date.now(),
-        content: newContent
+        timestamp: targetMessage.timestamp,
+        content: newContent,
+        edited: true
       }, keyData.key);
       const response = await messagesAPI.updateMessage(messageId, encrypted);
       setMessages(prev => ({
@@ -162,6 +202,7 @@ export const MessagesProvider = ({ children }) => {
             ? {
                 ...msg,
                 content: newContent,
+                edited: true,
                 updated_at: response.messageData.updated_at
               }
             : msg

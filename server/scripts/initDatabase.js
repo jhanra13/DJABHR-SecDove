@@ -134,6 +134,7 @@ const createTables = () => {
           conversation_id INTEGER NOT NULL,
           content_key_number INTEGER NOT NULL,
           encrypted_msg_content TEXT NOT NULL,
+          sender_username TEXT,
           created_at INTEGER NOT NULL,
           updated_at INTEGER,
           is_deleted INTEGER DEFAULT 0
@@ -161,10 +162,17 @@ const createTables = () => {
         if (err) {
           console.error('Error creating messages created_at index:', err);
           reject(err);
-        } else {
+          return;
+        }
+        db.run('ALTER TABLE messages ADD COLUMN sender_username TEXT', (alterErr) => {
+          if (alterErr && !alterErr.message.includes('duplicate column')) {
+            console.error('Error adding sender_username column:', alterErr);
+            reject(alterErr);
+            return;
+          }
           console.log('✓ Messages created_at index created');
           resolve();
-        }
+        });
       });
     });
   });

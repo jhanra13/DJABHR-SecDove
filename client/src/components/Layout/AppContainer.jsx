@@ -23,7 +23,7 @@ function AppContainer() {
     const [participantLoading, setParticipantLoading] = useState(false);
     const { currentView } = useViewContext();
     const { currentSession } = useAuth();
-    const { addParticipant: addConversationParticipant, leaveConversation } = useConversations();
+    const { addParticipants, leaveConversation } = useConversations();
     
     // Get messages context
     const { getMessages, loadMessages, sendMessage, clearMessages, loading: messagesLoading, error: messagesError } = useMessages();
@@ -69,12 +69,16 @@ function AppContainer() {
         setShowAddParticipant(true);
     };
 
-    const handleAddParticipant = async ({ username, shareHistory }) => {
+    const handleAddParticipant = async ({ usernames, shareHistory }) => {
         if (!participantTarget) return;
+        if (!usernames || usernames.length === 0) {
+            setParticipantError('Select at least one contact');
+            return;
+        }
         setParticipantLoading(true);
         setParticipantError('');
         try {
-            await addConversationParticipant(participantTarget.id, username, shareHistory);
+            await addParticipants(participantTarget.id, usernames, shareHistory);
             handleParticipantModalClose();
         } catch (err) {
             setParticipantError(err.message);
