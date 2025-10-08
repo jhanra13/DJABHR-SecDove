@@ -47,7 +47,10 @@ function Sidebar() {
                     <li
                         key={item.id}
                         className={`sidebar-item ${currentView === item.id ? 'active' : ''}`}
-                        onClick={() => switchView(item.id)}
+                        onClick={() => {
+                            console.log('Sidebar item clicked:', item.id); // Add debug log to trace navigation
+                            switchView(item.id);
+                        }}
                         title={item.label}
                     >
                         <FontAwesomeIcon icon={item.icon} />

@@ -157,6 +157,9 @@ function AppContainer() {
         }
     };
 
+    // Add debug log to trace currentView
+    console.log('AppContainer currentView:', currentView);
+
     return (
         <>
             <div className="app-container">

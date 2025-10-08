@@ -7,7 +7,7 @@ import { getStorageInfo } from '../../utils/messageStorage';
 function SettingsView() {
     const [showBackupModal, setShowBackupModal] = useState(false);
     const [stats, setStats] = useState(null);
-    const { currentSession } = useAuth();
+    const { currentSession, user } = useAuth();
 
     const loadStats = async () => {
         if (currentSession) {
@@ -21,8 +21,14 @@ function SettingsView() {
         loadStats();
     }, [currentSession]);
 
+    // Add a debug log to confirm rendering
+    console.log('SettingsView component rendered');
+
+    // Add a visible placeholder to confirm rendering
     return (
         <div className="settings-view">
+            <h1>⚙️ Settings</h1>
+            <p>Settings page is under construction.</p>
             <div className="settings-container">
                 <h1>⚙️ Settings</h1>
 
@@ -31,13 +37,13 @@ function SettingsView() {
                     <div className="settings-item">
                         <div className="settings-item-info">
                             <strong>Username</strong>
-                            <p>{user?.username}</p>
+                            <p>{user?.username || 'Guest'}</p>
                         </div>
                     </div>
                     <div className="settings-item">
                         <div className="settings-item-info">
                             <strong>User ID</strong>
-                            <p>{user?.id}</p>
+                            <p>{user?.id || 'N/A'}</p>
                         </div>
                     </div>
                 </section>
