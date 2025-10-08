@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import './AppContainer.css';
 import Sidebar from '../Sidebar/Sidebar';
 import DiscussionsList from '../Discussions/DiscussionsList';
@@ -14,7 +14,7 @@ import { useConversations } from '../../context/ConversationsContext';
 import AddParticipantModal from '../Modals/AddParticipantModal';
 
 function AppContainer() {
-    const [activeDiscussion, setActiveDiscussion] = useState(null);
+    const [activeConversationId, setActiveConversationId] = useState(null);
     const [showAddContact, setShowAddContact] = useState(false);
     const [showNewConversation, setShowNewConversation] = useState(false);
     const [showAddParticipant, setShowAddParticipant] = useState(false);
@@ -23,7 +23,12 @@ function AppContainer() {
     const [participantLoading, setParticipantLoading] = useState(false);
     const { currentView } = useViewContext();
     const { currentSession } = useAuth();
-    const { addParticipants, leaveConversation } = useConversations();
+    const { conversations, addParticipants, leaveConversation } = useConversations();
+
+    const activeDiscussion = useMemo(() => {
+        if (!activeConversationId) return null;
+        return conversations.find(conversation => conversation.id === activeConversationId) || null;
+    }, [conversations, activeConversationId]);
     
     // Get messages context
     const { getMessages, loadMessages, sendMessage, clearMessages, loading: messagesLoading, error: messagesError } = useMessages();
@@ -41,7 +46,7 @@ function AppContainer() {
     // Reset active discussion when user logs out
     useEffect(() => {
         if (!currentSession) {
-            setActiveDiscussion(null);
+            setActiveConversationId(null);
             setShowAddContact(false);
             setShowNewConversation(false);
             setShowAddParticipant(false);
@@ -53,8 +58,15 @@ function AppContainer() {
     // Handle new conversation created
     const handleConversationCreated = (conversation) => {
         // Automatically select the newly created conversation
-        setActiveDiscussion(conversation);
+        setActiveConversationId(conversation?.id ?? null);
     };
+
+    useEffect(() => {
+        if (!activeConversationId) return;
+        if (!conversations.some(convo => convo.id === activeConversationId)) {
+            setActiveConversationId(null);
+        }
+    }, [conversations, activeConversationId]);
 
     const handleParticipantModalClose = () => {
         setShowAddParticipant(false);
@@ -94,10 +106,14 @@ function AppContainer() {
         try {
             await leaveConversation(conversation.id);
             clearMessages(conversation.id);
-            setActiveDiscussion(null);
+            setActiveConversationId(null);
         } catch (err) {
             window.alert(err.message || 'Failed to leave conversation');
         }
+    };
+
+    const handleDiscussionSelect = (conversation) => {
+        setActiveConversationId(conversation?.id ?? null);
     };
 
     const renderView = () => {
@@ -107,7 +123,7 @@ function AppContainer() {
                     <>
                         <DiscussionsList
                             activeDiscussion={activeDiscussion}
-                            onDiscussionSelect={setActiveDiscussion}
+                            onDiscussionSelect={handleDiscussionSelect}
                             onAddContact={() => setShowAddContact(true)}
                         />
                         <ChatWindow 
