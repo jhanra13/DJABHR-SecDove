@@ -1,6 +1,6 @@
 .discussions {
   width: var(--discussions-width);
-  height: var(--container-height);
+  height: 100%;
   border-right: 1px solid var(--border-gray);
   display: flex;
   flex-direction: column;
