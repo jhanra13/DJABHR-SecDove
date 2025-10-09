@@ -1,0 +1,104 @@
+@startuml
+title SecureDove – User Use Cases (Comprehensive)
+
+left to right direction
+
+skinparam defaultFontSize 18
+skinparam ArrowThickness 2
+skinparam linetype ortho
+skinparam Padding 8
+scale 1600*900
+
+actor User
+
+rectangle "Authentication" as AUTH {
+  together {
+    usecase U1 as "Register (RSA keypair, encrypt private key)"
+    usecase U2 as "Check Username Availability"
+    usecase U3 as "Login (decrypt private key)"
+    usecase U4 as "Logout"
+  }
+}
+
+rectangle "Contacts" as CONTACTS {
+  together {
+    usecase U5 as "Add Contact"
+    usecase U6 as "List Contacts"
+    usecase U7 as "Remove Contact"
+    usecase U8 as "Fetch Contact Public Key"
+  }
+}
+
+rectangle "Conversations" as CONVOS {
+  together {
+    usecase U9 as "Create Conversation (wrap content key per participant)"
+    usecase U10 as "List Conversations"
+    usecase U11 as "Open Conversation"
+    usecase U12 as "Delete Conversation (leave)"
+    usecase U13 as "Add Participants (share history)"
+    usecase U14 as "Add Participants (rotate key)"
+  }
+}
+
+rectangle "Messaging" as MSG {
+  together {
+    usecase U15 as "Send Message (AES-GCM)"
+    usecase U16 as "Receive Real-time Message"
+    usecase U17 as "Load Message History"
+    usecase U18 as "Edit Message"
+    usecase U19 as "Delete Message"
+  }
+}
+
+rectangle "Realtime" as RT {
+  together {
+    usecase U20 as "Join Conversation Channel"
+    usecase U21 as "Leave Conversation Channel"
+    usecase U22 as "Receive System Events (participants/key)"
+  }
+}
+
+rectangle "Backup & Local Data" as BAK {
+  together {
+    usecase U23 as "Create/Export Backup (encrypted content)"
+    usecase U24 as "Import/Restore Backup"
+    usecase U25 as "Clear Local Messages"
+  }
+}
+
+User -right-> U1
+User -right-> U2
+User -right-> U3
+User -right-> U4
+
+User -right-> U5
+User -right-> U6
+User -right-> U7
+User -right-> U8
+
+User -right-> U9
+User -right-> U10
+User -right-> U11
+User -right-> U12
+User -right-> U13
+User -right-> U14
+
+User -right-> U15
+User -right-> U16
+User -right-> U17
+User -right-> U18
+User -right-> U19
+
+User -right-> U20
+User -right-> U21
+User -right-> U22
+
+User -right-> U23
+User -right-> U24
+User -right-> U25
+
+legend bottom
+Columns (Authentication, Contacts, Conversations, Messaging, Realtime, Backup) are arranged left→right for a 16:9 layout; orthogonal edges reduce overlap.
+endlegend
+
+@enduml

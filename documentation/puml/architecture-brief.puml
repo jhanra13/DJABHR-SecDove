@@ -1,0 +1,88 @@
+@startuml
+title SecureDove Architecture – Brief Component View
+
+left to right direction
+
+skinparam componentStyle rectangle
+skinparam defaultFontSize 18
+skinparam ArrowThickness 2
+skinparam linetype ortho
+skinparam Padding 8
+scale 1600*900
+
+package "Client (React)" {
+  package "UI" {
+    component "UI" as UIComp
+  }
+  package "Context Providers" {
+    component "AuthContext" as AuthContext
+    component "ContactsContext" as ContactsContext
+    component "ConversationsContext" as ConversationsContext
+    component "MessagesContext" as MessagesContext
+    component "WebSocketContext" as WebSocketContext
+    component "ViewContext" as ViewContext
+  }
+  package "API Wrappers" {
+    component "AuthAPI" as AuthAPI
+    component "ContactsAPI" as ContactsAPI
+    component "ConversationsAPI" as ConversationsAPI
+    component "MessagesAPI" as MessagesAPI
+  }
+}
+
+package "Server (Express + Socket.IO)" {
+  package "Routes" {
+    component "AuthRoutes" as AuthRoutes
+    component "ContactsRoutes" as ContactsRoutes
+    component "ConversationsRoutes" as ConversationsRoutes
+    component "MessagesRoutes" as MessagesRoutes
+  }
+  package "Middleware" {
+    component "AuthMiddleware" as AuthMiddleware
+    component "RateLimiter" as RateLimiter
+  }
+  package "Realtime" {
+    component "RealtimeGateway" as RealtimeGateway
+  }
+  database "SQLite DB" as SQLite
+}
+
+UIComp --> AuthContext
+UIComp --> ContactsContext
+UIComp --> ConversationsContext
+UIComp --> MessagesContext
+UIComp --> ViewContext
+UIComp --> WebSocketContext
+
+AuthContext --> AuthAPI
+ContactsContext --> ContactsAPI
+ConversationsContext --> ConversationsAPI
+ConversationsContext --> ContactsAPI
+MessagesContext --> MessagesAPI
+MessagesContext --> WebSocketContext
+
+AuthAPI ..> AuthRoutes : REST
+ContactsAPI ..> ContactsRoutes : REST
+ConversationsAPI ..> ConversationsRoutes : REST
+MessagesAPI ..> MessagesRoutes : REST
+
+AuthRoutes --> AuthMiddleware
+AuthRoutes --> RateLimiter
+ContactsRoutes --> AuthMiddleware
+ConversationsRoutes --> AuthMiddleware
+MessagesRoutes --> AuthMiddleware
+
+AuthRoutes --> SQLite
+ContactsRoutes --> SQLite
+ConversationsRoutes --> SQLite
+MessagesRoutes --> SQLite
+MessagesRoutes ..> RealtimeGateway : emit events
+ConversationsRoutes ..> RealtimeGateway : emit events
+
+WebSocketContext ..> RealtimeGateway : Socket.IO
+
+legend bottom
+Patterns: Client–Server, Layered. Server uses modular routing (Controller-like routes + Middleware) with a persistence layer. Client uses Context/Provider pattern with Hooks.
+endlegend
+
+@enduml

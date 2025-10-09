@@ -1,0 +1,228 @@
+.contacts-view {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background: #1a1a2e;
+    color: #eee;
+    overflow: hidden;
+}
+
+.contacts-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid #333;
+    background: #16213e;
+}
+
+.contacts-header h2 {
+    margin: 0;
+    color: #eee;
+    font-size: 1.5rem;
+}
+
+.add-contact-btn {
+    background: #0f3460;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background-color 0.2s;
+}
+
+.add-contact-btn:hover {
+    background: #1e5a8a;
+}
+
+.loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    color: #bbb;
+    font-size: 1.1rem;
+}
+
+.error-message {
+    background: #2d1b1b;
+    color: #ff6b6b;
+    padding: 10px 20px;
+    border-left: 4px solid #ff6b6b;
+    margin: 10px 20px;
+    border-radius: 4px;
+}
+
+.add-contact-form {
+    background: #16213e;
+    padding: 20px;
+    border-bottom: 1px solid #333;
+}
+
+.add-contact-form form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.add-contact-form input {
+    background: #1a1a2e;
+    border: 1px solid #333;
+    color: #eee;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 1rem;
+}
+
+.add-contact-form input:focus {
+    outline: none;
+    border-color: #0f3460;
+}
+
+.form-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.form-actions button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background-color 0.2s;
+}
+
+.form-actions button[type="submit"] {
+    background: #0f3460;
+    color: white;
+}
+
+.form-actions button[type="submit"]:hover {
+    background: #1e5a8a;
+}
+
+.form-actions button[type="button"] {
+    background: #444;
+    color: white;
+}
+
+.form-actions button[type="button"]:hover {
+    background: #555;
+}
+
+.contacts-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+.no-contacts {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    color: #bbb;
+    font-size: 1.1rem;
+    text-align: center;
+}
+
+.contact-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background: #16213e;
+    border-radius: 12px;
+    margin-bottom: 10px;
+    transition: background-color 0.2s;
+}
+
+.contact-item:hover {
+    background: #1e2a52;
+}
+
+.contact-item.blocked {
+    opacity: 0.6;
+    background: #2d1b1b;
+}
+
+.contact-item.blocked:hover {
+    background: #3d2525;
+}
+
+.contact-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.contact-name {
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: #eee;
+}
+
+.contact-username {
+    font-size: 0.9rem;
+    color: #bbb;
+}
+
+.blocked-indicator {
+    font-size: 0.8rem;
+    color: #ff6b6b;
+    font-weight: 500;
+}
+
+.contact-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.contact-actions button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: background-color 0.2s;
+}
+
+.block-btn {
+    background: #d4570a;
+    color: white;
+}
+
+.block-btn:hover {
+    background: #e67e22;
+}
+
+.delete-btn {
+    background: #c0392b;
+    color: white;
+}
+
+.delete-btn:hover {
+    background: #e74c3c;
+}
+
+/* Scrollbar styling for webkit browsers */
+.contacts-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+.contacts-list::-webkit-scrollbar-track {
+    background: #1a1a2e;
+}
+
+.contacts-list::-webkit-scrollbar-thumb {
+    background: #333;
+    border-radius: 4px;
+}
+
+.contacts-list::-webkit-scrollbar-thumb:hover {
+    background: #444;
+}

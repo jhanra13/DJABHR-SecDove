@@ -105,11 +105,6 @@ data/
 outputs/
 plots/
 
-# Common image/plot outputs
-*.png
-*.svg
-*.pdf
-
 # Matplotlib cache
 .matplotlib/
 

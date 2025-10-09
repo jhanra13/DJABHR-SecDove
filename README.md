@@ -3,13 +3,22 @@
 A course project for CptS 428: Software Security and Reverse Engineering. SecureDove is a secure messaging application focused on privacy, confidentiality, and tamper resistance.
 
 ## Table of Contents
-- [Project Overview](#project-overview)
-- [Development Approach](#development-approach)
-- [Security Goals](#security-goals)
-- [Technology Stack](#technology-stack)
-- [Team Information](#team-information)
-- [Collaborators](#collaborators)
-- [Project Milestones & Deliverables](#project-milestones--deliverables)
+- [SecureDove: A Secure Messenger](#securedove-a-secure-messenger)
+  - [Table of Contents](#table-of-contents)
+  - [Project Overview](#project-overview)
+  - [Development Approach](#development-approach)
+    - [Option 1: Secure Development Lifecycle](#option-1-secure-development-lifecycle)
+    - [Option 2: Layered Security Model](#option-2-layered-security-model)
+  - [Security Goals](#security-goals)
+  - [Technology Stack](#technology-stack)
+  - [Team Information](#team-information)
+  - [Collaborators](#collaborators)
+  - [Project Milestones \& Deliverables](#project-milestones--deliverables)
+  - [Installation Instructions](#installation-instructions)
+    - [Running](#running)
+    - [Usage](#usage)
+    - [Notes](#notes)
+  - [Documentation](#documentation)
 
 ## Project Overview
 SecureDove aims to provide end-to-end encrypted messaging with strong authentication and integrity guarantees. Throughout development, we will incorporate rigorous testing and iterative hardening to meet well-defined security goals.
@@ -40,12 +49,11 @@ SecureDove will adopt widely accepted communication security practices, includin
 We will also use static code analysis, fuzz testing, and penetration testing throughout development to evaluate and strengthen security.
 
 ## Technology Stack
-- Backend: Python (Flask or FastAPI) or Node.js (Express) for the messaging server
-- Client: Python CLI or lightweight web UI
-- Database: SQLite or PostgreSQL for user and message metadata
+- Backend: Node.js (Express)
+- Client: React+Vite
+- Database: SQLite
 - Encryption & Security Libraries:
-  - Python: cryptography, PyNaCl
-  - Node.js: crypto, jsonwebtoken (if applicable)
+  - Node.js: crypto, jsonwebtoken
 - Version Control: GitHub
 
 ## Team Information
@@ -78,3 +86,68 @@ The following accounts have been added as collaborators to the repository:
 |         4 | Deliverable 4: Amend & Enhance           | Nov 27   | Update design and implementation with enhanced security. Develop countermeasures, validate fixes with regression testing, and document improvements.              |
 |         5 | Deliverable 5: Final Report & Demo       | Dec 1    | Present project outcomes, lessons learned, and insights. Finalize all artifacts (code, documentation, exploits, fixes) and demonstrate the build-break-fix cycle. |
 
+## Installation Instructions
+
+**Prerequisites**
+- Node.js LTS (v18+ recommended)
+- npm (bundled with Node)
+
+**Clone and install**
+- `npm install` in both `server/` and `client/` directories.
+
+**Server environment**
+- Create `server/.env` with (example defaults):
+  - `PORT=8000`
+  - `NODE_ENV=development`
+  - `JWT_SECRET=<set-a-strong-secret>`
+  - `DB_PATH=./database/securedove.db`
+  - `CORS_ORIGIN=http://localhost:5173`
+  - `RATE_LIMIT_WINDOW_MS=900000` and `RATE_LIMIT_MAX_REQUESTS=100`
+  - `LOGIN_RATE_LIMIT_WINDOW_MS=900000` and `LOGIN_RATE_LIMIT_MAX_REQUESTS=5`
+
+**Client environment**
+- Create `client/.env` with:
+  - `VITE_API_URL=http://localhost:8000/api`
+  - Optionally: `VITE_SOCKET_URL=http://localhost:8000`
+
+### Running
+
+**Option A: Start both via helper script**
+- From repo root: `./start.sh` (or `start.bat` on Windows)
+
+**Option B: Start separately**
+- Server: `cd server && npm run dev` (or `npm start`)
+- Client: `cd client && npm run dev` (Vite dev server on port 5173)
+
+### Usage
+
+1) **Register and Login**
+- Registration generates an RSA keypair client‑side; the private key is encrypted with a password‑derived key and stored server‑side only in encrypted form.
+- Login decrypts the private key client‑side after JWT authentication.
+
+2) **Contacts**
+- Add/remove/list contacts; fetch public keys for secure key wrapping.
+
+3) **Conversations**
+- Create conversations by wrapping a content key per participant. Add participants either by:
+  - Sharing history (re‑wrap historical content keys for new users), or
+  - Rotating to a new content key (key number increments for all participants).
+- Leave/delete removes the current user’s membership; emits a system event.
+
+4) **Messaging**
+- Messages are encrypted (AES‑GCM) client‑side with the conversation content key. Realtime delivery via Socket.IO; history is fetched via REST and decrypted locally.
+- Edit/delete operations update or remove encrypted payloads; system events (participant added/removed, key rotation) appear as broadcast messages in the timeline.
+
+5) **Backup & Local Data**
+- Create/export a backup (JSON) of encrypted messages and metadata. Import/restore to merge/replace local data. Optionally clear all local messages.
+
+### Notes
+
+- **Security**
+  - The server never handles plaintext messages or private keys.
+  - Ensure HTTPS and strong JWT secret in production.
+- **CORS/WebSocket**
+  - Match `CORS_ORIGIN` to the client dev server (`http://localhost:5173`) and `VITE_SOCKET_URL` to the server origin.
+
+## Documentation
+All documentation for the software development process is located in the [`/documentation`](documentation) folder.

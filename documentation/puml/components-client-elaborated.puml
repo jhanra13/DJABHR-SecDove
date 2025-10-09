@@ -1,0 +1,178 @@
+@startuml
+title Client Component Design – Elaborated
+
+left to right direction
+
+skinparam componentStyle rectangle
+skinparam defaultFontSize 18
+skinparam ArrowThickness 2
+skinparam linetype ortho
+skinparam Padding 8
+scale 1600*900
+
+package "Lane 2: Contexts" {
+  class AuthContext <<component>> {
+    -- Attributes --
+    - currentSession: Session | null
+    - loading: boolean
+    - error: string | null
+    -- Operations (exposed) --
+    + register(username, password)
+    + login(username, password)
+    + logout()
+    + checkUsernameExists(username)
+    + isAuthenticated(): boolean
+  }
+
+  class ContactsContext <<component>> {
+    -- Attributes --
+    - contacts: Contact[]
+    - loading: boolean
+    - error: string | null
+    -- Operations (exposed) --
+    + loadContacts()
+    + addContact(username)
+    + deleteContact(contactId)
+    + getPublicKey(username)
+  }
+
+  class ConversationsContext <<component>> {
+    -- Attributes --
+    - conversations: Conversation[]
+    - contentKeyCache: Map<id, {latest:number, keys:Map<number,CryptoKey>}>
+    - loading: boolean
+    - error: string | null
+    -- Operations (exposed) --
+    + loadConversations()
+    + createConversation(usernames: string[])
+    + getContentKey(conversationId, keyNumber?)
+    + getConversation(conversationId)
+    + addParticipants(conversationId, usernames, shareHistory)
+    + leaveConversation(conversationId)
+    + deleteConversation(conversationId)
+  }
+
+  class MessagesContext <<component>> {
+    -- Attributes --
+    - messages: Map<conversationId, Message[]>
+    - loading: boolean
+    - error: string | null
+    -- Operations (exposed) --
+    + loadMessages(conversationId)
+    + sendMessage(conversationId, content)
+    + updateMessage(conversationId, messageId, newContent)
+    + deleteMessage(conversationId, messageId)
+    + clearMessages(conversationId)
+    + getMessages(conversationId): Message[]
+  }
+
+  class WebSocketContext <<component>> {
+    -- Attributes --
+    - connected: boolean
+    - socket: Socket | null
+    -- Operations (exposed) --
+    + on(event, handler)
+    + off(event, handler)
+    + emit(event, data)
+    + joinConversation(conversationId)
+    + leaveConversation(conversationId)
+  }
+
+  class ViewContext <<component>> {
+    -- Attributes --
+    - currentView: enum
+    - selectedConversation: number | null
+    -- Operations (exposed) --
+    + switchView(view)
+    + selectConversation(conversationId)
+    + clearConversation()
+  }
+}
+
+package "Lane 3: APIs (HTTP)" {
+  interface IAuthAPI {
+    + register(userData)
+    + login(credentials)
+    + getUser()
+    + logout()
+    + checkUsername(username)
+  }
+  interface IContactsAPI {
+    + addContact(username)
+    + getContacts()
+    + deleteContact(contactId)
+    + getPublicKey(username)
+  }
+  interface IConversationsAPI {
+    + createConversation(entries)
+    + getConversations()
+    + getConversation(id)
+    + deleteConversation(id, payload)
+    + addParticipants(id, payload)
+  }
+  interface IMessagesAPI {
+    + sendMessage(messageData)
+    + getMessages(conversationId, limit, offset)
+    + updateMessage(messageId, encryptedContent)
+    + deleteMessage(messageId)
+    + getRecentMessages(limit)
+  }
+}
+
+package "Lane 4: Utilities" {
+  class CryptoUtils <<utility>> {
+    + generateKeyPair()
+    + derivePasswordKey(password, salt)
+    + encryptPrivateKey(privateKey, passwordKey)
+    + decryptPrivateKey(encrypted, passwordKey)
+    + generateContentKey()
+    + encryptContentKey(contentKey, publicKey)
+    + decryptContentKey(encrypted, privateKey)
+    + encryptMessage(messageObj, contentKey)
+    + decryptMessage(encrypted, contentKey)
+  }
+
+  class MessageStorage <<utility>> {
+    + getStoredMessages()
+    + getStoredMetadata()
+    + saveMessages(conversationId, list)
+    + saveMetadata(conversationId, meta)
+    + clearAllMessages()
+    + getStorageInfo()
+  }
+
+  class MessageBackup <<utility>> {
+    + createBackup(password?)
+    + exportBackup(backup, filename?)
+    + importBackup(file)
+    + restoreBackup(backup, merge)
+    + createAndExportBackup()
+    + importAndRestoreBackup(file, merge)
+  }
+package "Lane 1: UI" {
+  class UI
+}
+
+UI ..> AuthContext : uses
+UI ..> ContactsContext : uses
+UI ..> ConversationsContext : uses
+UI ..> MessagesContext : uses
+UI ..> ViewContext : uses
+UI ..> WebSocketContext : uses
+
+AuthContext ..> IAuthAPI
+ContactsContext ..> IContactsAPI
+ConversationsContext ..> IConversationsAPI
+MessagesContext ..> IMessagesAPI
+MessagesContext ..> WebSocketContext
+
+AuthContext ..> CryptoUtils
+ConversationsContext ..> CryptoUtils
+MessagesContext ..> CryptoUtils
+MessageBackup ..> MessageStorage
+
+legend bottom
+Left‑to‑right lanes reduce edge crossings: UI → Contexts → APIs/Utilities. Exposed context operations are consumed by UI; APIs wrap REST; WebSocketContext encapsulates realtime.
+endlegend
+
+@enduml
