@@ -1,0 +1,24 @@
+{
+  "name": "securedove",
+  "version": "1.0.0",
+  "description": "SecureDove: A Secure Messenger - Full stack E2EE messaging application",
+  "private": true,
+  "scripts": {
+    "install-all": "npm install && cd server && npm install && cd ../client && npm install",
+    "dev": "concurrently \"cd server && npm run dev\" \"cd client && npm run dev\"",
+    "build": "npm run build:server && npm run build:client",
+    "build:server": "cd server && npm run build",
+    "build:client": "cd client && npm run build",
+    "start": "npm run start:server",
+    "start:server": "cd server && npm start",
+    "start:client": "cd client && npm run dev"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}
+
