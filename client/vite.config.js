@@ -3,6 +3,10 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
+  define: {
+    // Ensure environment variables are properly defined during build
+    'process.env': {}
+  },
   server: {
     port: 3000,
     proxy: {
@@ -15,7 +19,9 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    assetsDir: 'assets'
+    assetsDir: 'assets',
+    sourcemap: false,
+    minify: 'terser'
   }
 });
 
