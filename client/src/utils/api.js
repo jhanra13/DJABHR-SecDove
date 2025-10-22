@@ -15,8 +15,42 @@ async function request(path, { method = 'GET', body, params } = {}) {
     headers,
     body: body ? JSON.stringify(body) : undefined
   });
+
   const text = await resp.text();
-  const data = text ? JSON.parse(text) : {};
+  let data = {};
+
+  // Try to parse JSON, but handle cases where server returns HTML error pages
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch (parseError) {
+    // If JSON parsing fails, check if we got HTML (common for 404/500 errors)
+    const isHTML = text.trim().startsWith('<');
+    if (isHTML) {
+      // Server returned HTML instead of JSON (likely an error page)
+      const error = new Error(
+        `Server returned HTML instead of JSON (Status ${resp.status}). ` +
+        `This usually indicates a routing issue or server error. ` +
+        `Expected endpoint: ${url.toString()}`
+      );
+      error.response = {
+        status: resp.status,
+        data: { error: 'Invalid response format', rawText: text.substring(0, 200) }
+      };
+      throw error;
+    } else {
+      // Non-HTML, non-JSON response
+      const error = new Error(
+        `Failed to parse server response as JSON (Status ${resp.status}). ` +
+        `Response: ${text.substring(0, 100)}`
+      );
+      error.response = {
+        status: resp.status,
+        data: { error: 'Invalid JSON response', rawText: text.substring(0, 200) }
+      };
+      throw error;
+    }
+  }
+
   if (!resp.ok) {
     const error = new Error(data?.error || resp.statusText);
     error.response = { status: resp.status, data };

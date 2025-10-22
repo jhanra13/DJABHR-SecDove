@@ -281,5 +281,10 @@ export async function decryptMessage(encryptedHex, contentKey) {
   // Parse JSON
   const dec = new TextDecoder();
   const messageJson = dec.decode(decrypted);
-  return JSON.parse(messageJson);
+  try {
+    return JSON.parse(messageJson);
+  } catch (parseError) {
+    console.error('Failed to parse decrypted message as JSON:', parseError);
+    throw new Error(`Decrypted message is not valid JSON. This may indicate data corruption or an incorrect decryption key.`);
+  }
 }

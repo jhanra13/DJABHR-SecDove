@@ -1,27 +1,31 @@
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 
-export default defineConfig({
-  plugins: [react()],
-  define: {
-    // Ensure environment variables are properly defined during build
-    'process.env': {}
-  },
-  server: {
-    port: 3000,
-    proxy: {
-      '/register': 'http://127.0.0.1:8000',
-      '/ws': {
-        target: 'http://127.0.0.1:8000',
-        ws: true
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '');
+
+  return {
+    plugins: [react()],
+    define: {
+      // Ensure environment variables are properly defined during build
+      'process.env': {}
+    },
+    server: {
+      port: Number(env.VITE_DEV_PORT) || 5173,
+      proxy: {
+        '/register': env.VITE_API_URL?.replace('/api', '') || 'http://127.0.0.1:8000',
+        '/ws': {
+          target: env.VITE_SOCKET_URL || 'http://127.0.0.1:8000',
+          ws: true
+        }
       }
+    },
+    build: {
+      outDir: 'dist',
+      assetsDir: 'assets',
+      sourcemap: false,
+      minify: 'terser'
     }
-  },
-  build: {
-    outDir: 'dist',
-    assetsDir: 'assets',
-    sourcemap: false,
-    minify: 'terser'
-  }
+  };
 });
 
