@@ -171,7 +171,11 @@ async function startServer() {
   }
 }
 
-startServer();
+// In serverless (Vercel) environments, the platform provides the HTTP server and calls the handler.
+// Only start a standalone listener when not running on Vercel.
+if (!process.env.VERCEL) {
+  startServer();
+}
 
 process.on('SIGTERM', () => {
   httpServer.close(() => process.exit(0));

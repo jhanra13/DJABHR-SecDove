@@ -5,7 +5,7 @@
     "NODE_ENV": "production"
   },
   "functions": {
-    "server.js": {
+    "api/index.mjs": {
       "memory": 1024,
       "maxDuration": 60
     }
