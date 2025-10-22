@@ -17,11 +17,38 @@ const httpServer = createServer(app);
 const nodeEnv = getEnv('NODE_ENV', 'development');
 const isDevelopment = nodeEnv === 'development';
 const PORT = Number.parseInt(getEnv('PORT', 3000), 10);
-const CORS_ORIGIN = getEnv('CORS_ORIGIN', 'http://localhost:5173');
+
+// CORS origin can be a single origin or comma-separated list of origins
+const corsOriginEnv = getEnv('CORS_ORIGIN', 'http://localhost:5173');
+const CORS_ORIGINS = corsOriginEnv.includes(',')
+  ? corsOriginEnv.split(',').map(origin => origin.trim())
+  : corsOriginEnv;
+
+// CORS configuration function to handle multiple origins
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+
+    const allowedOrigins = Array.isArray(CORS_ORIGINS) ? CORS_ORIGINS : [CORS_ORIGINS];
+
+    if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+      callback(null, true);
+    } else {
+      console.warn(`CORS blocked request from origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['Content-Length', 'Content-Type'],
+  maxAge: 86400 // 24 hours
+};
 
 const io = new Server(httpServer, {
   cors: {
-    origin: CORS_ORIGIN,
+    origin: corsOptions.origin,
     credentials: true,
     methods: ['GET', 'POST']
   }
@@ -40,12 +67,7 @@ app.use(helmet({
   hsts: { maxAge: 31536000, includeSubDomains: true, preload: true }
 }));
 
-app.use(cors({
-  origin: CORS_ORIGIN,
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+app.use(cors(corsOptions));
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
