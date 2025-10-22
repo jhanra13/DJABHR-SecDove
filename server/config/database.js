@@ -39,7 +39,7 @@ function createMinimalSchema(database) {
       encrypted_private_key TEXT NOT NULL,
       created_at INTEGER NOT NULL
     )`,
-    `CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)`,
+  `CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)`,
     `CREATE TABLE IF NOT EXISTS contacts (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER NOT NULL,
@@ -107,6 +107,31 @@ function createMinimalSchema(database) {
   });
 }
 
+function normalizeExistingUsernames(database) {
+  const cleanupStatements = [
+    `UPDATE users SET username = LOWER(TRIM(username))`,
+    `UPDATE contacts SET contact_username = LOWER(TRIM(contact_username))`,
+    `UPDATE conversations SET username = LOWER(TRIM(username))`,
+    `UPDATE messages SET sender_username = LOWER(TRIM(sender_username)) WHERE sender_username IS NOT NULL`,
+    `UPDATE conversation_events SET actor_username = LOWER(TRIM(actor_username)) WHERE actor_username IS NOT NULL`
+  ];
+
+  return new Promise((resolve) => {
+    database.serialize(() => {
+      const runNext = (index = 0) => {
+        if (index >= cleanupStatements.length) {
+          resolve();
+          return;
+        }
+
+        database.run(cleanupStatements[index], () => runNext(index + 1));
+      };
+
+      runNext();
+    });
+  });
+}
+
 function openDatabase(path) {
   return new Promise((resolve, reject) => {
     try {
@@ -115,6 +140,7 @@ function openDatabase(path) {
         if (err) return reject(err);
         console.log(`Connected to SQLite database at ${path}`);
         await createMinimalSchema(database);
+        await normalizeExistingUsernames(database);
         resolve(database);
       });
     } catch (e) {

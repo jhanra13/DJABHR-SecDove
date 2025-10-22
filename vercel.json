@@ -14,6 +14,9 @@
     { "source": "/api/(.*)", "destination": "/api/index.mjs" },
     { "source": "/socket.io/(.*)", "destination": "/api/index.mjs" }
   ],
+  "routes": [
+    { "src": "/socket\\.io/?(.*)", "dest": "/api/index.mjs" }
+  ],
   "headers": [
     {
       "source": "/api/(.*)",

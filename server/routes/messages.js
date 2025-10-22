@@ -1,14 +1,15 @@
 import express from 'express';
 import { run, get, all } from '../config/database.js';
 import { authenticateToken } from '../middleware/auth.js';
+import { normalizeUsername } from '../utils/username.js';
 
 const router = express.Router();
 
 // POST /api/messages - Send a new message
 router.post('/', authenticateToken, async (req, res) => {
   try {
-    const { conversation_id, content_key_number, encrypted_msg_content } = req.body;
-    const username = req.user.username;
+  const { conversation_id, content_key_number, encrypted_msg_content } = req.body;
+  const username = normalizeUsername(req.user.username);
 
     // Validate required fields
     if (!conversation_id || content_key_number === undefined || !encrypted_msg_content) {
@@ -17,7 +18,7 @@ router.post('/', authenticateToken, async (req, res) => {
 
     // Verify user is part of the conversation
     const userInConversation = await get(
-      'SELECT id FROM conversations WHERE id = ? AND username = ?',
+      'SELECT id FROM conversations WHERE id = ? AND username = ? COLLATE NOCASE',
       [conversation_id, username]
     );
 
@@ -30,7 +31,7 @@ router.post('/', authenticateToken, async (req, res) => {
     const result = await run(
       `INSERT INTO messages (conversation_id, content_key_number, encrypted_msg_content, sender_username, created_at, is_deleted)
        VALUES (?, ?, ?, ?, ?, 0)`,
-      [conversation_id, content_key_number, encrypted_msg_content, username, timestamp]
+  [conversation_id, content_key_number, encrypted_msg_content, username, timestamp]
     );
 
     const messageData = {
@@ -75,13 +76,13 @@ router.post('/', authenticateToken, async (req, res) => {
 // GET /api/messages/:conversationId - Get all messages for a conversation
 router.get('/:conversationId', authenticateToken, async (req, res) => {
   try {
-    const { conversationId } = req.params;
-    const username = req.user.username;
+  const { conversationId } = req.params;
+  const username = normalizeUsername(req.user.username);
     const { limit = 50, offset = 0 } = req.query;
 
     // Verify user is part of the conversation
     const userInConversation = await get(
-      'SELECT id FROM conversations WHERE id = ? AND username = ?',
+      'SELECT id FROM conversations WHERE id = ? AND username = ? COLLATE NOCASE',
       [conversationId, username]
     );
 
@@ -122,9 +123,9 @@ router.get('/:conversationId', authenticateToken, async (req, res) => {
 // PUT /api/messages/:messageId - Update (edit) a message
 router.put('/:messageId', authenticateToken, async (req, res) => {
   try {
-    const { messageId } = req.params;
-    const { encrypted_msg_content } = req.body;
-    const username = req.user.username;
+  const { messageId } = req.params;
+  const { encrypted_msg_content } = req.body;
+  const username = normalizeUsername(req.user.username);
 
     // Validate required fields
     if (!encrypted_msg_content) {
@@ -141,13 +142,13 @@ router.put('/:messageId', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Message not found' });
     }
 
-    if (message.sender_username && message.sender_username !== username) {
+    if (message.sender_username && normalizeUsername(message.sender_username) !== username) {
       return res.status(403).json({ error: 'Not allowed to modify this message' });
     }
 
     // Verify user is part of the conversation
     const userInConversation = await get(
-      'SELECT id FROM conversations WHERE id = ? AND username = ?',
+      'SELECT id FROM conversations WHERE id = ? AND username = ? COLLATE NOCASE',
       [message.conversation_id, username]
     );
 
@@ -190,8 +191,8 @@ router.put('/:messageId', authenticateToken, async (req, res) => {
 // DELETE /api/messages/:messageId - Delete a message (soft delete)
 router.delete('/:messageId', authenticateToken, async (req, res) => {
   try {
-    const { messageId } = req.params;
-    const username = req.user.username;
+  const { messageId } = req.params;
+  const username = normalizeUsername(req.user.username);
 
     // Get message and verify it exists
     const message = await get(
@@ -203,13 +204,13 @@ router.delete('/:messageId', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Message not found' });
     }
 
-    if (message.sender_username && message.sender_username !== username) {
+    if (message.sender_username && normalizeUsername(message.sender_username) !== username) {
       return res.status(403).json({ error: 'Not allowed to delete this message' });
     }
 
     // Verify user is part of the conversation
     const userInConversation = await get(
-      'SELECT id FROM conversations WHERE id = ? AND username = ?',
+      'SELECT id FROM conversations WHERE id = ? AND username = ? COLLATE NOCASE',
       [message.conversation_id, username]
     );
 
@@ -241,12 +242,12 @@ router.delete('/:messageId', authenticateToken, async (req, res) => {
 // GET /api/messages/recent - Get recent messages across all conversations
 router.get('/recent/all', authenticateToken, async (req, res) => {
   try {
-    const username = req.user.username;
+  const username = normalizeUsername(req.user.username);
     const { limit = 20 } = req.query;
 
     // Get user's conversation IDs
     const userConversations = await all(
-      'SELECT DISTINCT id FROM conversations WHERE username = ?',
+      'SELECT DISTINCT id FROM conversations WHERE username = ? COLLATE NOCASE',
       [username]
     );
 

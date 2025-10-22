@@ -1,6 +1,7 @@
 import express from 'express';
 import { run, get, all } from '../config/database.js';
 import { authenticateToken } from '../middleware/auth.js';
+import { normalizeUsername } from '../utils/username.js';
 
 const router = express.Router();
 
@@ -9,16 +10,18 @@ router.post('/', authenticateToken, async (req, res) => {
   try {
     const { contact_username } = req.body;
     const userId = req.user.userId;
+    const currentUsername = normalizeUsername(req.user.username);
+    const lookupUsername = normalizeUsername(contact_username);
 
     // Validate required fields
-    if (!contact_username) {
+    if (!lookupUsername) {
       return res.status(400).json({ error: 'Contact username is required' });
     }
 
     // Check if contact user exists
     const contactUser = await get(
-      'SELECT id, username, public_key FROM users WHERE username = ?',
-      [contact_username]
+      'SELECT id, username, public_key FROM users WHERE username = ? COLLATE NOCASE',
+      [lookupUsername]
     );
 
     if (!contactUser) {
@@ -26,7 +29,7 @@ router.post('/', authenticateToken, async (req, res) => {
     }
 
     // Prevent adding self as contact
-    if (contactUser.id === userId) {
+    if (normalizeUsername(contactUser.username) === currentUsername) {
       return res.status(400).json({ error: 'Cannot add yourself as a contact' });
     }
 
@@ -66,7 +69,7 @@ router.post('/', authenticateToken, async (req, res) => {
 // GET /api/contacts - Get all contacts for current user
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const userId = req.user.userId;
+  const userId = req.user.userId;
 
     const contacts = await all(
       `SELECT c.id, c.contact_user_id, c.contact_username, c.added_at, u.public_key
@@ -114,10 +117,11 @@ router.delete('/:contactId', authenticateToken, async (req, res) => {
 router.get('/:username/public-key', authenticateToken, async (req, res) => {
   try {
     const { username } = req.params;
+    const lookupUsername = normalizeUsername(username);
 
     const user = await get(
-      'SELECT id, username, public_key FROM users WHERE username = ?',
-      [username]
+      'SELECT id, username, public_key FROM users WHERE username = ? COLLATE NOCASE',
+      [lookupUsername]
     );
 
     if (!user) {

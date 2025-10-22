@@ -1,6 +1,7 @@
 import express from 'express';
 import { run, get, all } from '../config/database.js';
 import { authenticateToken } from '../middleware/auth.js';
+import { normalizeUsername } from '../utils/username.js';
 
 const router = express.Router();
 
@@ -9,17 +10,25 @@ router.post('/', authenticateToken, async (req, res) => {
   try {
     const { conversation_entries } = req.body;
     const io = req.app.get('io');
+    const currentUsername = normalizeUsername(req.user.username);
+
+    const normalizedEntries = Array.isArray(conversation_entries)
+      ? conversation_entries.map(entry => ({
+          ...entry,
+          username: normalizeUsername(entry?.username)
+        }))
+      : [];
 
     // Validate required fields
-    if (!conversation_entries || !Array.isArray(conversation_entries) || conversation_entries.length === 0) {
+    if (!normalizedEntries.length) {
       return res.status(400).json({ error: 'Conversation entries array is required' });
     }
 
     // Validate each entry
-    const conversationId = conversation_entries[0].id;
-    const contentKeyNumber = conversation_entries[0].content_key_number || 1;
+    const conversationId = normalizedEntries[0].id;
+    const contentKeyNumber = normalizedEntries[0].content_key_number || 1;
 
-    for (const entry of conversation_entries) {
+    for (const entry of normalizedEntries) {
       if (!entry.id || !entry.username || !entry.encrypted_content_key) {
         return res.status(400).json({ error: 'Invalid conversation entry format' });
       }
@@ -29,8 +38,7 @@ router.post('/', authenticateToken, async (req, res) => {
     }
 
     // Verify current user is in the conversation
-    const currentUsername = req.user.username;
-    const userInConversation = conversation_entries.some(entry => entry.username === currentUsername);
+  const userInConversation = normalizedEntries.some(entry => entry.username === currentUsername);
     
     if (!userInConversation) {
       return res.status(403).json({ error: 'User must be a participant in the conversation' });
@@ -38,7 +46,7 @@ router.post('/', authenticateToken, async (req, res) => {
 
     // Insert all conversation entries
     const timestamp = Date.now();
-    for (const entry of conversation_entries) {
+    for (const entry of normalizedEntries) {
       await run(
         `INSERT INTO conversations (id, content_key_number, username, encrypted_content_key, created_at)
          VALUES (?, ?, ?, ?, ?)`,
@@ -46,7 +54,7 @@ router.post('/', authenticateToken, async (req, res) => {
       );
     }
 
-    const participantUsernames = Array.from(new Set(conversation_entries.map(entry => entry.username)));
+    const participantUsernames = Array.from(new Set(normalizedEntries.map(entry => entry.username)));
     await broadcastToParticipants(conversationId, io, 'conversation-created', {
       participants: participantUsernames,
       content_key_number: contentKeyNumber,
@@ -64,7 +72,7 @@ router.post('/', authenticateToken, async (req, res) => {
       conversation: {
         id: conversationId,
         content_key_number: contentKeyNumber,
-        participants: conversation_entries.map(e => e.username),
+        participants: normalizedEntries.map(e => e.username),
         created_at: timestamp
       }
     });
@@ -79,7 +87,7 @@ async function getLatestUserKey(conversationId, username) {
   const row = await get(
     `SELECT MAX(content_key_number) as max_key
      FROM conversations
-     WHERE id = ? AND username = ?`,
+     WHERE id = ? AND username = ? COLLATE NOCASE`,
     [conversationId, username]
   );
   return row?.max_key ?? null;
@@ -102,7 +110,8 @@ async function broadcastToParticipants(conversationId, io, event, payload = {}) 
     [conversationId]
   );
   participants.forEach(({ username }) => {
-    io.to(`user:${username}`).emit(event, { conversationId, ...payload });
+    const normalized = normalizeUsername(username);
+    io.to(`user:${normalized}`).emit(event, { conversationId, ...payload });
   });
 }
 
@@ -127,12 +136,14 @@ async function saveBroadcastMessage(conversationId, username, io, broadcast) {
     throw err;
   }
 
+  const normalizedUsername = normalizeUsername(username);
+
   const timestamp = Date.now();
   const result = await run(
     `INSERT INTO messages (conversation_id, content_key_number, encrypted_msg_content, sender_username, created_at, updated_at, is_deleted)
      VALUES (?, ?, ?, ?, ?, NULL, 0)`
     ,
-    [conversationId, broadcast.content_key_number, broadcast.encrypted_msg_content, username, timestamp]
+    [conversationId, broadcast.content_key_number, broadcast.encrypted_msg_content, normalizedUsername, timestamp]
   );
 
   if (io) {
@@ -141,7 +152,7 @@ async function saveBroadcastMessage(conversationId, username, io, broadcast) {
       conversation_id: conversationId,
       content_key_number: broadcast.content_key_number,
       encrypted_msg_content: broadcast.encrypted_msg_content,
-      sender_username: username,
+      sender_username: normalizedUsername,
       created_at: timestamp,
       updated_at: null,
       is_deleted: 0
@@ -154,7 +165,7 @@ async function saveBroadcastMessage(conversationId, username, io, broadcast) {
 // GET /api/conversations - Get all conversations for current user
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const username = req.user.username;
+    const username = normalizeUsername(req.user.username);
 
     const userConversations = await all(
       `SELECT c1.id, c1.content_key_number, c1.encrypted_content_key, c1.created_at
@@ -208,7 +219,7 @@ router.get('/', authenticateToken, async (req, res) => {
 router.get('/:conversationId', authenticateToken, async (req, res) => {
   try {
     const { conversationId } = req.params;
-    const username = req.user.username;
+    const username = normalizeUsername(req.user.username);
 
     // Get user's entry for this conversation
     const userEntry = await get(
@@ -267,7 +278,17 @@ router.post('/:conversationId/participants', authenticateToken, async (req, res)
       return res.status(400).json({ error: 'Participant entries are required' });
     }
 
-    const currentUsername = req.user.username;
+    const currentUsername = normalizeUsername(req.user.username);
+    const normalizedEntries = entries.map(entry => ({
+      ...entry,
+      username: normalizeUsername(entry?.username),
+      keys: Array.isArray(entry?.keys)
+        ? entry.keys.map(keyEntry => ({
+            ...keyEntry
+          }))
+        : entry?.keys
+    }));
+
     const latestKeyNumber = await getLatestUserKey(conversationId, currentUsername);
 
     if (latestKeyNumber === null) {
@@ -280,7 +301,7 @@ router.post('/:conversationId/participants', authenticateToken, async (req, res)
       if (!entry?.username || typeof entry.username !== 'string') {
         throw new Error('Invalid participant entry');
       }
-      const userExists = await get('SELECT id FROM users WHERE username = ?', [entry.username]);
+      const userExists = await get('SELECT id FROM users WHERE username = ? COLLATE NOCASE', [entry.username]);
       if (!userExists) {
         throw new Error(`User ${entry.username} not found`);
       }
@@ -299,7 +320,7 @@ router.post('/:conversationId/participants', authenticateToken, async (req, res)
       }
     };
 
-    if (share_history) {
+  if (share_history) {
       const allowedKeys = await all(
         `SELECT content_key_number, MIN(created_at) AS created_at
          FROM conversations
@@ -317,7 +338,7 @@ router.post('/:conversationId/participants', authenticateToken, async (req, res)
         allowedMap.set(row.content_key_number, row.created_at);
       });
 
-      for (const entry of entries) {
+      for (const entry of normalizedEntries) {
         try {
           await validateEntry(entry, { requireEncryptedKey: false, requireKeys: true });
         } catch (err) {
@@ -333,7 +354,7 @@ router.post('/:conversationId/participants', authenticateToken, async (req, res)
           }
 
           const alreadyParticipant = await get(
-            `SELECT 1 FROM conversations WHERE id = ? AND content_key_number = ? AND username = ?`,
+            `SELECT 1 FROM conversations WHERE id = ? AND content_key_number = ? AND username = ? COLLATE NOCASE`,
             [conversationId, keyNumber, entry.username]
           );
 
@@ -347,7 +368,7 @@ router.post('/:conversationId/participants', authenticateToken, async (req, res)
         }
       }
 
-      const newUsernames = entries.map(e => e.username);
+      const newUsernames = normalizedEntries.map(e => e.username);
       await broadcastToParticipants(conversationId, io, 'conversation-participants-added', {
         usernames: newUsernames,
         share_history: true,
@@ -381,7 +402,7 @@ router.post('/:conversationId/participants', authenticateToken, async (req, res)
     }
 
     const uniqueUsernames = new Set();
-    for (const entry of entries) {
+    for (const entry of normalizedEntries) {
       try {
         await validateEntry(entry, { requireEncryptedKey: true });
       } catch (err) {
@@ -394,7 +415,7 @@ router.post('/:conversationId/participants', authenticateToken, async (req, res)
       return res.status(400).json({ error: 'Current user must be included when rotating key' });
     }
 
-    for (const entry of entries) {
+    for (const entry of normalizedEntries) {
       await run(
         `INSERT INTO conversations (id, content_key_number, username, encrypted_content_key, created_at)
          VALUES (?, ?, ?, ?, ?)`,
@@ -439,7 +460,7 @@ router.post('/:conversationId/participants', authenticateToken, async (req, res)
 router.delete('/:conversationId', authenticateToken, async (req, res) => {
   try {
     const { conversationId } = req.params;
-    const username = req.user.username;
+    const username = normalizeUsername(req.user.username);
     const { system_broadcast } = req.body ?? {};
     const io = req.app.get('io');
 
@@ -458,7 +479,7 @@ router.delete('/:conversationId', authenticateToken, async (req, res) => {
     }
 
     await run(
-      'DELETE FROM conversations WHERE id = ? AND username = ?',
+      'DELETE FROM conversations WHERE id = ? AND username = ? COLLATE NOCASE',
       [conversationId, username]
     );
 

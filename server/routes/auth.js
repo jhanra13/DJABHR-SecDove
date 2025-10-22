@@ -3,6 +3,7 @@ import { run, get } from '../config/database.js';
 import { hashPassword, verifyPassword, generateToken } from '../utils/auth.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { loginLimiter } from '../middleware/rateLimiter.js';
+import { normalizeUsername, validateUsernameFormat } from '../utils/username.js';
 
 const router = express.Router();
 
@@ -10,21 +11,22 @@ const router = express.Router();
 router.post('/register', async (req, res) => {
   try {
     const { username, password, public_key, salt, encrypted_private_key } = req.body;
+    const normalizedUsername = normalizeUsername(username);
 
     // Validate required fields
-    if (!username || !password || !public_key || !salt || !encrypted_private_key) {
+    if (!normalizedUsername || !password || !public_key || !salt || !encrypted_private_key) {
       return res.status(400).json({ error: 'All fields are required' });
     }
 
     // Validate username format (alphanumeric, underscore, hyphen, 3-20 chars)
-    if (!/^[a-zA-Z0-9_-]{3,20}$/.test(username)) {
+    if (!validateUsernameFormat(normalizedUsername)) {
       return res.status(400).json({ 
         error: 'Username must be 3-20 characters and contain only letters, numbers, underscores, or hyphens' 
       });
     }
 
     // Check if username already exists
-    const existingUser = await get('SELECT id FROM users WHERE username = ?', [username]);
+    const existingUser = await get('SELECT id FROM users WHERE username = ? COLLATE NOCASE', [normalizedUsername]);
     if (existingUser) {
       return res.status(409).json({ error: 'Username already exists' });
     }
@@ -36,17 +38,17 @@ router.post('/register', async (req, res) => {
     const result = await run(
       `INSERT INTO users (username, password_hash, public_key, salt, encrypted_private_key, created_at) 
        VALUES (?, ?, ?, ?, ?, ?)`,
-      [username, password_hash, public_key, salt, encrypted_private_key, Date.now()]
+      [normalizedUsername, password_hash, public_key, salt, encrypted_private_key, Date.now()]
     );
 
     // Generate JWT token
-    const token = generateToken(result.id, username);
+    const token = generateToken(result.id, normalizedUsername);
 
     res.status(201).json({
       message: 'User registered successfully',
       user: {
         id: result.id,
-        username,
+  username: normalizedUsername,
         public_key,
         salt,
         encrypted_private_key
@@ -63,19 +65,20 @@ router.post('/register', async (req, res) => {
 router.post('/login', loginLimiter, async (req, res) => {
   try {
     const { username, password } = req.body;
+    const normalizedUsername = normalizeUsername(username);
 
     console.log('Login attempt:', { username, hasPassword: !!password });
 
     // Validate required fields
-    if (!username || !password) {
+    if (!normalizedUsername || !password) {
       console.log('Missing username or password');
       return res.status(400).json({ error: 'Username and password are required' });
     }
 
     // Find user by username
     const user = await get(
-      'SELECT id, username, password_hash, public_key, salt, encrypted_private_key FROM users WHERE username = ?',
-      [username]
+      'SELECT id, username, password_hash, public_key, salt, encrypted_private_key FROM users WHERE username = ? COLLATE NOCASE',
+      [normalizedUsername]
     );
 
     if (!user) {
@@ -95,13 +98,20 @@ router.post('/login', loginLimiter, async (req, res) => {
     console.log('Login successful for user:', username);
 
     // Generate JWT token
-    const token = generateToken(user.id, user.username);
+    const storedUsername = normalizeUsername(user.username);
+
+    if (storedUsername !== user.username) {
+      await run('UPDATE users SET username = ? WHERE id = ?', [storedUsername, user.id]);
+      user.username = storedUsername;
+    }
+
+    const token = generateToken(user.id, storedUsername);
 
     res.json({
       message: 'Login successful',
       user: {
         id: user.id,
-        username: user.username,
+        username: storedUsername,
         public_key: user.public_key,
         salt: user.salt,
         encrypted_private_key: user.encrypted_private_key
@@ -143,15 +153,16 @@ router.post('/logout', authenticateToken, (req, res) => {
 // GET /api/auth/check-username/:username - Check if username exists (public route)
 router.get('/check-username/:username', async (req, res) => {
   try {
-    const { username } = req.params;
+  const { username } = req.params;
+  const normalizedUsername = normalizeUsername(username);
 
     // Validate username format
-    if (!/^[a-zA-Z0-9_-]{3,20}$/.test(username)) {
+    if (!validateUsernameFormat(normalizedUsername)) {
       return res.status(400).json({ error: 'Invalid username format' });
     }
 
     // Check if username exists
-    const existingUser = await get('SELECT id FROM users WHERE username = ?', [username]);
+    const existingUser = await get('SELECT id FROM users WHERE username = ? COLLATE NOCASE', [normalizedUsername]);
     
     res.json({ exists: !!existingUser });
   } catch (error) {
