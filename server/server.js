@@ -55,15 +55,11 @@ const io = new Server(httpServer, {
 });
 app.set('io', io);
 
+// Helmet configuration - disable CSP in production for better Vercel compatibility
 app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      scriptSrc: ["'self'"],
-      imgSrc: ["'self'", 'data:', 'https:']
-    }
-  },
+  contentSecurityPolicy: false, // Disable CSP to avoid conflicts with CORS and Vercel
+  crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: false,
   hsts: { maxAge: 31536000, includeSubDomains: true, preload: true }
 }));
 
@@ -80,8 +76,27 @@ if (isDevelopment) {
   });
 }
 
+// Middleware to log CORS info for debugging
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin) {
+    console.log(`Request from origin: ${origin}`);
+  }
+  next();
+});
+
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: Date.now(), environment: nodeEnv });
+});
+
+// CORS test endpoint
+app.get('/api/cors-test', (req, res) => {
+  res.json({
+    message: 'CORS is working!',
+    origin: req.headers.origin || 'No origin header',
+    allowedOrigins: Array.isArray(CORS_ORIGINS) ? CORS_ORIGINS : [CORS_ORIGINS],
+    timestamp: Date.now()
+  });
 });
 
 app.use('/api/auth', authRoutes);
@@ -125,20 +140,27 @@ io.on('connection', (socket) => {
 async function startServer() {
   try {
     await ensureDatabaseIntegrity();
-    httpServer.listen(PORT, () => {
-      console.log(`SecureDove running on port ${PORT} (${nodeEnv})`);
-    });
+    // Only start server if not in Vercel serverless environment
+    if (!process.env.VERCEL) {
+      httpServer.listen(PORT, () => {
+        console.log(`SecureDove running on port ${PORT} (${nodeEnv})`);
+      });
+    }
   } catch (error) {
     console.error('Failed to start server:', error.message);
-    process.exit(1);
+    if (!process.env.VERCEL) {
+      process.exit(1);
+    }
   }
 }
 
+// Initialize database
 startServer();
 
 process.on('SIGTERM', () => {
   httpServer.close(() => process.exit(0));
 });
 
+// Export for Vercel serverless
 export default app;
 export { io };
