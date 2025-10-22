@@ -1,6 +1,6 @@
-import app from '../server/server.js';
+import { httpServer } from '../server/server.js';
 
-// Vercel Node function entry: delegate to Express app
+// Vercel Node function entry: delegate to the shared HTTP server (supports Socket.IO long polling)
 export default function handler(req, res) {
-  return app(req, res);
+  return httpServer.emit('request', req, res);
 }

@@ -28,23 +28,81 @@ function ensureDirExists(path) {
 }
 
 function createMinimalSchema(database) {
-  return new Promise((resolve) => {
+  const statements = [
+    'PRAGMA foreign_keys = ON',
+    `CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      username TEXT UNIQUE NOT NULL,
+      password_hash TEXT NOT NULL,
+      public_key TEXT NOT NULL,
+      salt TEXT NOT NULL,
+      encrypted_private_key TEXT NOT NULL,
+      created_at INTEGER NOT NULL
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)`,
+    `CREATE TABLE IF NOT EXISTS contacts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      contact_user_id INTEGER NOT NULL,
+      contact_username TEXT NOT NULL,
+      added_at INTEGER NOT NULL,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (contact_user_id) REFERENCES users(id) ON DELETE CASCADE,
+      UNIQUE(user_id, contact_user_id)
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_contacts_user_id ON contacts(user_id)`,
+    `CREATE TABLE IF NOT EXISTS conversations (
+      id INTEGER NOT NULL,
+      content_key_number INTEGER NOT NULL,
+      username TEXT NOT NULL,
+      encrypted_content_key TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      PRIMARY KEY (id, content_key_number, username),
+      FOREIGN KEY (username) REFERENCES users(username) ON DELETE CASCADE
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_conversations_username ON conversations(username)`,
+    `CREATE INDEX IF NOT EXISTS idx_conversations_id ON conversations(id)`,
+    `CREATE TABLE IF NOT EXISTS messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      conversation_id INTEGER NOT NULL,
+      content_key_number INTEGER NOT NULL,
+      encrypted_msg_content TEXT NOT NULL,
+      sender_username TEXT,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER,
+      is_deleted INTEGER DEFAULT 0
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages(conversation_id, content_key_number)`,
+    `CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages(created_at)`,
+    `CREATE TABLE IF NOT EXISTS conversation_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      conversation_id INTEGER NOT NULL,
+      type TEXT NOT NULL,
+      actor_username TEXT,
+      details TEXT,
+      created_at INTEGER NOT NULL
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_events_conversation ON conversation_events(conversation_id, created_at)`
+  ];
+
+  return new Promise((resolve, reject) => {
     database.serialize(() => {
-      database.run('PRAGMA foreign_keys = ON');
-      // Users table (required for /api/auth/*)
-      database.run(`
-        CREATE TABLE IF NOT EXISTS users (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          username TEXT UNIQUE NOT NULL,
-          password_hash TEXT NOT NULL,
-          public_key TEXT NOT NULL,
-          salt TEXT NOT NULL,
-          encrypted_private_key TEXT NOT NULL,
-          created_at INTEGER NOT NULL
-        )
-      `);
-      database.run(`CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)`);
-      resolve();
+      const runNext = (index = 0) => {
+        if (index >= statements.length) {
+          resolve();
+          return;
+        }
+
+        database.run(statements[index], (err) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+          runNext(index + 1);
+        });
+      };
+
+      runNext();
     });
   });
 }

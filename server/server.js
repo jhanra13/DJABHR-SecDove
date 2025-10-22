@@ -182,4 +182,4 @@ process.on('SIGTERM', () => {
 });
 
 export default app;
-export { io };
+export { io, httpServer };
