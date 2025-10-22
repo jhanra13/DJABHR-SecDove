@@ -19,20 +19,35 @@ const isDevelopment = nodeEnv === 'development';
 const PORT = Number.parseInt(getEnv('PORT', 3000), 10);
 
 // CORS origin can be a single origin or comma-separated list of origins
-const corsOriginEnv = getEnv('CORS_ORIGIN', 'https://secdove-frontend.vercel.app/');
-const CORS_ORIGINS = corsOriginEnv.includes(',')
-  ? corsOriginEnv.split(',').map(origin => origin.trim())
-  : corsOriginEnv;
+const DEFAULT_ORIGIN = 'https://secdove-frontend.vercel.app';
+const corsOriginEnv = getEnv('CORS_ORIGIN', DEFAULT_ORIGIN);
 
-// CORS configuration function to handle multiple origins
+const normalizeOrigin = (origin) => {
+  if (!origin) return '';
+  return origin.trim().replace(/\/$/, '');
+};
+
+const parseOrigins = (value) => {
+  if (!value) return [];
+  return value.split(',')
+    .map(item => normalizeOrigin(item))
+    .filter(Boolean);
+};
+
+const configuredOrigins = parseOrigins(corsOriginEnv);
+const allowedOriginsList = configuredOrigins.length > 0 ? configuredOrigins : [DEFAULT_ORIGIN];
+const allowedOriginsSet = new Set(allowedOriginsList.map(origin => origin.toLowerCase()));
+
+const isOriginAllowed = (origin) => {
+  if (!origin) return true;
+  const normalizedOrigin = normalizeOrigin(origin).toLowerCase();
+  return allowedOriginsSet.has('*') || allowedOriginsSet.has(normalizedOrigin);
+};
+
+// CORS configuration function to handle multiple origins and trailing slashes
 const corsOptions = {
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-
-    const allowedOrigins = Array.isArray(CORS_ORIGINS) ? CORS_ORIGINS : [CORS_ORIGINS];
-
-    if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+    if (isOriginAllowed(origin)) {
       callback(null, true);
     } else {
       console.warn(`CORS blocked request from origin: ${origin}`);
@@ -48,7 +63,14 @@ const corsOptions = {
 
 const io = new Server(httpServer, {
   cors: {
-    origin: corsOptions.origin,
+    origin: (origin, callback) => {
+      if (isOriginAllowed(origin)) {
+        callback(null, true);
+      } else {
+        console.warn(`Socket.IO blocked request from origin: ${origin}`);
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
     methods: ['GET', 'POST']
   }
