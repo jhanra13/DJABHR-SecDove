@@ -19,7 +19,7 @@ const isDevelopment = nodeEnv === 'development';
 const PORT = Number.parseInt(getEnv('PORT', 3000), 10);
 
 // CORS origin can be a single origin or comma-separated list of origins
-const corsOriginEnv = getEnv('CORS_ORIGIN', 'http://localhost:5173');
+const corsOriginEnv = getEnv('CORS_ORIGIN', 'https://secdove-frontend.vercel.app/');
 const CORS_ORIGINS = corsOriginEnv.includes(',')
   ? corsOriginEnv.split(',').map(origin => origin.trim())
   : corsOriginEnv;
