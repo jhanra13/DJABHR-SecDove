@@ -1,7 +1,6 @@
 import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
-import cors from 'cors';
 import helmet from 'helmet';
 import { apiLimiter } from './middleware/rateLimiter.js';
 import { ensureDatabaseIntegrity } from './utils/databaseVerification.js';
@@ -44,23 +43,6 @@ const isOriginAllowed = (origin) => {
   return allowedOriginsSet.has('*') || allowedOriginsSet.has(normalizedOrigin);
 };
 
-// CORS configuration function to handle multiple origins and trailing slashes
-const corsOptions = {
-  origin: (origin, callback) => {
-    if (isOriginAllowed(origin)) {
-      callback(null, true);
-    } else {
-      console.warn(`CORS blocked request from origin: ${origin}`);
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  exposedHeaders: ['Content-Length', 'Content-Type'],
-  maxAge: 86400 // 24 hours
-};
-
 const io = new Server(httpServer, {
   cors: {
     origin: (origin, callback) => {
@@ -77,6 +59,39 @@ const io = new Server(httpServer, {
 });
 app.set('io', io);
 
+const corsMiddleware = (req, res, next) => {
+  const requestOrigin = req.headers.origin || '';
+  const normalizedOrigin = requestOrigin ? normalizeOrigin(requestOrigin) : '';
+
+  if (normalizedOrigin && !isOriginAllowed(normalizedOrigin)) {
+    console.warn(`CORS blocked request from origin: ${requestOrigin}`);
+    return res.status(403).json({ error: 'Not allowed by CORS' });
+  }
+
+  if (requestOrigin) {
+    res.header('Access-Control-Allow-Origin', requestOrigin);
+    res.header('Vary', 'Origin');
+  }
+
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+
+  const requestedHeaders = req.headers['access-control-request-headers'];
+  if (requestedHeaders) {
+    res.header('Access-Control-Allow-Headers', requestedHeaders);
+  } else {
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept');
+  }
+
+  res.header('Access-Control-Expose-Headers', 'Content-Length, Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(204);
+  }
+
+  next();
+};
+
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -89,8 +104,7 @@ app.use(helmet({
   hsts: { maxAge: 31536000, includeSubDomains: true, preload: true }
 }));
 
-app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
+app.use(corsMiddleware);
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
