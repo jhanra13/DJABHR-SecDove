@@ -17,8 +17,9 @@
     }
   },
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/index.mjs" },
-    { "source": "/socket.io/(.*)", "destination": "/api/socketio.mjs" }
+    { "source": "/socket.io/(.*)", "destination": "/api/socketio" },
+    { "source": "/api/_health", "destination": "/api/_health" },
+    { "source": "/api/(.*)", "destination": "/api/index" }
   ],
   "headers": [
     {
