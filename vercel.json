@@ -8,11 +8,15 @@
     "api/index.mjs": {
       "memory": 1024,
       "maxDuration": 60
+    },
+    "api/socketio.mjs": {
+      "memory": 1024,
+      "maxDuration": 60
     }
   },
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/index.mjs" },
-    { "source": "/socket.io/(.*)", "destination": "/api/index.mjs" }
+    { "source": "/socket.io/(.*)", "destination": "/api/socketio.mjs" }
   ],
   "headers": [
     {

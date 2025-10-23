@@ -10,10 +10,19 @@ const __dirname = dirname(__filename);
 const defaultPath = join(__dirname, '..', 'database', 'securedove.db');
 let configuredPath = getEnv('DB_PATH', defaultPath);
 
-// In Vercel serverless, use writable /tmp when no explicit DB_PATH is provided
+// In Vercel serverless, refuse silent ephemeral DB unless explicitly allowed
 const isVercel = !!process.env.VERCEL;
-if (isVercel && (!process.env.DB_PATH || process.env.DB_PATH === defaultPath)) {
-  configuredPath = '/tmp/securedove.db';
+const allowEphemeral = (getEnv('ALLOW_EPHEMERAL_DB', '').toLowerCase() === 'true');
+if (isVercel) {
+  if (process.env.DB_PATH && process.env.DB_PATH !== defaultPath) {
+    configuredPath = process.env.DB_PATH;
+  } else if (allowEphemeral) {
+    configuredPath = '/tmp/securedove.db';
+    console.warn('[DB] Using EPHEMERAL /tmp SQLite on Vercel (ALLOW_EPHEMERAL_DB=true). Data will not persist.');
+  } else {
+    console.error('[DB] Persistent database not configured. Set DB_PATH to a managed database or enable ALLOW_EPHEMERAL_DB for demo-only.');
+    configuredPath = null;
+  }
 }
 
 function ensureDirExists(path) {
@@ -32,7 +41,7 @@ function createMinimalSchema(database) {
     'PRAGMA foreign_keys = ON',
     `CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      username TEXT UNIQUE NOT NULL,
+      username TEXT NOT NULL,
       password_hash TEXT NOT NULL,
       public_key TEXT NOT NULL,
       salt TEXT NOT NULL,
@@ -113,7 +122,9 @@ function normalizeExistingUsernames(database) {
     `UPDATE contacts SET contact_username = LOWER(TRIM(contact_username))`,
     `UPDATE conversations SET username = LOWER(TRIM(username))`,
     `UPDATE messages SET sender_username = LOWER(TRIM(sender_username)) WHERE sender_username IS NOT NULL`,
-    `UPDATE conversation_events SET actor_username = LOWER(TRIM(actor_username)) WHERE actor_username IS NOT NULL`
+    `UPDATE conversation_events SET actor_username = LOWER(TRIM(actor_username)) WHERE actor_username IS NOT NULL`,
+    // Best-effort: enforce case-insensitive uniqueness (will be skipped if duplicates exist)
+    `CREATE UNIQUE INDEX IF NOT EXISTS users_username_unique_nocase ON users(username COLLATE NOCASE)`
   ];
 
   return new Promise((resolve) => {
@@ -135,10 +146,22 @@ function normalizeExistingUsernames(database) {
 function openDatabase(path) {
   return new Promise((resolve, reject) => {
     try {
+      if (!path) {
+        return reject(new Error('Database path is not configured'));
+      }
       ensureDirExists(path);
       const database = new sqlite3.Database(path, async (err) => {
         if (err) return reject(err);
         console.log(`Connected to SQLite database at ${path}`);
+        try {
+          // Improve reliability for concurrent access
+          await new Promise((res, rej) => database.exec(
+            'PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL;',
+            (e) => e ? rej(e) : res()
+          ));
+        } catch (e) {
+          console.warn('Warning applying PRAGMAs:', e?.message || e);
+        }
         await createMinimalSchema(database);
         await normalizeExistingUsernames(database);
         resolve(database);
@@ -154,9 +177,9 @@ try {
   db = await openDatabase(configuredPath);
 } catch (err) {
   console.error('Primary database open failed:', err?.message || err);
-  if (isVercel) {
+  if (isVercel && allowEphemeral) {
     try {
-      // Last-resort: in-memory DB to keep the function alive (data will not persist)
+      // Last-resort: in-memory DB for demo only
       db = await openDatabase(':memory:');
       console.warn('Using in-memory SQLite database (serverless fallback)');
     } catch (e) {

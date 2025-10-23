@@ -4,6 +4,7 @@ import { useAuth } from './AuthContext';
 
 const WebSocketContext = createContext(null);
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:8000';
+const SOCKET_PATH = import.meta.env.VITE_SOCKET_PATH || '/socket.io';
 
 export const useWebSocket = () => {
   const context = useContext(WebSocketContext);
@@ -25,6 +26,7 @@ export const WebSocketProvider = ({ children }) => {
     }
 
     const socket = io(SOCKET_URL, {
+      path: SOCKET_PATH,
       autoConnect: true,
       reconnection: true,
       reconnectionDelay: 1000,
