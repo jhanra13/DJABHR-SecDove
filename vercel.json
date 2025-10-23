@@ -5,17 +5,17 @@
     "NODE_ENV": "production"
   },
   "functions": {
-    "api/index.mjs": {
+    "api/index.js": {
       "memory": 1024,
       "maxDuration": 60,
       "runtime": "nodejs18.x"
     },
-    "api/socketio.mjs": {
+    "api/socketio.js": {
       "memory": 1024,
       "maxDuration": 60,
       "runtime": "nodejs18.x"
     },
-    "api/_health.mjs": {
+    "api/_health.js": {
       "memory": 256,
       "maxDuration": 10,
       "runtime": "nodejs18.x"
