@@ -63,11 +63,7 @@ const corsMiddleware = (req, res, next) => {
   const requestOrigin = req.headers.origin || '';
   const normalizedOrigin = requestOrigin ? normalizeOrigin(requestOrigin) : '';
 
-  if (normalizedOrigin && !isOriginAllowed(normalizedOrigin)) {
-    console.warn(`CORS blocked request from origin: ${requestOrigin}`);
-    return res.status(403).json({ error: 'Not allowed by CORS' });
-  }
-
+  // Always emit CORS headers so the browser receives a proper error payload instead of a CORS failure
   if (requestOrigin) {
     res.header('Access-Control-Allow-Origin', requestOrigin);
     res.header('Vary', 'Origin');
@@ -87,6 +83,12 @@ const corsMiddleware = (req, res, next) => {
 
   if (req.method === 'OPTIONS') {
     return res.sendStatus(204);
+  }
+
+  // After setting headers, enforce origin policy for non-preflight requests
+  if (normalizedOrigin && !isOriginAllowed(normalizedOrigin)) {
+    console.warn(`CORS blocked request from origin: ${requestOrigin}`);
+    return res.status(403).json({ error: 'Not allowed by CORS' });
   }
 
   next();
