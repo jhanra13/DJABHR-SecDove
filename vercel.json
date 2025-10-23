@@ -7,11 +7,13 @@
   "functions": {
     "api/index.mjs": {
       "memory": 1024,
-      "maxDuration": 60
+      "maxDuration": 60,
+      "runtime": "nodejs18.x"
     },
     "api/socketio.mjs": {
       "memory": 1024,
-      "maxDuration": 60
+      "maxDuration": 60,
+      "runtime": "nodejs18.x"
     }
   },
   "rewrites": [
