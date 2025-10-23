@@ -1,11 +1,5 @@
 const DEFAULT_ORIGIN = 'https://secdove-frontend.vercel.app';
 
-export const config = {
-  api: {
-    bodyParser: false
-  }
-};
-
 function applyCors(req, res) {
   const origin = req.headers.origin || DEFAULT_ORIGIN;
   res.setHeader('Access-Control-Allow-Origin', origin);
@@ -17,7 +11,7 @@ function applyCors(req, res) {
   res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Type');
 }
 
-export default async function handler(req, res) {
+export default function handler(req, res) {
   applyCors(req, res);
   if (req.method === 'OPTIONS') {
     res.statusCode = 204;

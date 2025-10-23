@@ -1,11 +1,5 @@
 const DEFAULT_ORIGIN = 'https://secdove-frontend.vercel.app';
 
-export const config = {
-  api: {
-    bodyParser: false
-  }
-};
-
 function applyCors(req, res) {
   const origin = req.headers.origin || DEFAULT_ORIGIN;
   res.setHeader('Access-Control-Allow-Origin', origin);
