@@ -25,13 +25,21 @@
 **Problem:** All three Vercel API wrapper files were accepting requests from ANY origin without validation.
 
 **Files Fixed:**
-- `api/index.js`
-- `api/socketio.js`
-- `api/_health.js`
+- `server/api/index.js`
+- `server/api/socketio.js`
+- `server/api/_health.js`
 
 **Fix Applied:** Added origin validation that reads from `CORS_ORIGIN` environment variable and rejects disallowed origins with 403.
 
-### 3. **Missing Production Environment Files** ✅ CREATED
+### 3. **API Folder Location Issue** ✅ FIXED
+**Problem:** The `api/` folder was at the root level, but backend is deployed with root=`server/`, so Vercel couldn't find the API handlers.
+
+**Fix Applied:**
+- Moved `api/` folder to `server/api/`
+- Moved `vercel.json` to `server/vercel.json`
+- Updated import paths in API handlers (`../server/server.js` → `../server.js`)
+
+### 4. **Missing Production Environment Files** ✅ CREATED
 **Problem:** No production environment configuration for server.
 
 **Fix Applied:** Created `server/.env.production` with production-ready settings.

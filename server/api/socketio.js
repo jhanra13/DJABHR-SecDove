@@ -49,8 +49,13 @@ module.exports = async (req, res) => {
     return;
   }
 
+  const originalUrl = req.url || '';
+  if (originalUrl.startsWith('/api/socketio')) {
+    req.url = `/socket.io${originalUrl.slice('/api/socketio'.length)}` || '/socket.io';
+  }
+
   try {
-    const mod = await import('../server/server.js');
+    const mod = await import('../server.js');
     const { httpServer } = mod;
     return httpServer.emit('request', req, res);
   } catch (e) {
