@@ -1,6 +1,5 @@
 {
   "version": 2,
-  "buildCommand": "npm run build",
   "env": {
     "NODE_ENV": "production"
   },
@@ -19,12 +18,27 @@
       "memory": 256,
       "maxDuration": 10,
       "runtime": "nodejs18.x"
+    },
+    "api/server-entry.js": {
+      "memory": 1024,
+      "maxDuration": 60,
+      "runtime": "nodejs18.x"
+    },
+    "api/socketio-entry.js": {
+      "memory": 1024,
+      "maxDuration": 60,
+      "runtime": "nodejs18.x"
+    },
+    "api/health.js": {
+      "memory": 256,
+      "maxDuration": 10,
+      "runtime": "nodejs18.x"
     }
   },
   "rewrites": [
-    { "source": "/socket.io/(.*)", "destination": "/api/socketio" },
-    { "source": "/api/_health", "destination": "/api/_health" },
-    { "source": "/api/(.*)", "destination": "/api/index" }
+    { "source": "/socket.io/(.*)", "destination": "/api/socketio-entry" },
+    { "source": "/api/_health", "destination": "/api/health" },
+    { "source": "/api/(.*)", "destination": "/api/server-entry" }
   ],
   "headers": [
     {
