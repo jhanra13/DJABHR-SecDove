@@ -13,9 +13,9 @@ export default defineConfig(({ mode }) => {
     server: {
       port: Number(env.VITE_DEV_PORT) || 5173,
       proxy: {
-        '/register': env.VITE_API_URL?.replace('/api', '') || 'http://127.0.0.1:8000',
+        '/register': env.VITE_API_URL?.replace('/api', '') || 'http://localhost:8000',
         '/ws': {
-          target: env.VITE_SOCKET_URL || 'http://127.0.0.1:8000',
+          target: env.VITE_SOCKET_URL || 'http://localhost:8000',
           ws: true
         }
       }
