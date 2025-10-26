@@ -27,7 +27,10 @@ const corsOptionsDelegate = (req, callback) => {
   let allowOrigin = false;
 
   if (requestOrigin) {
-    if (staticAllowedOrigins.has(requestOrigin)) {
+    if (isDevelopment) {
+      // In development, allow any explicit origin (Vite proxy / LAN IP over HTTPS)
+      allowOrigin = requestOrigin;
+    } else if (staticAllowedOrigins.has(requestOrigin)) {
       allowOrigin = requestOrigin;
     } else {
       try {
@@ -52,12 +55,11 @@ const corsOptionsDelegate = (req, callback) => {
   callback(null, corsOptions);
 };
 
+// Socket.IO CORS: in development, allow any origin (proxied by Vite); in production, restrict to configured origins
 const io = new Server(httpServer, {
-  cors: {
-    origin: CORS_ORIGIN,
-    credentials: true,
-    methods: ['GET', 'POST']
-  }
+  cors: isDevelopment
+    ? { origin: (origin, callback) => callback(null, true), credentials: true, methods: ['GET', 'POST'] }
+    : { origin: parseOrigins(CORS_ORIGIN), credentials: true, methods: ['GET', 'POST'] }
 });
 app.set('io', io);
 
