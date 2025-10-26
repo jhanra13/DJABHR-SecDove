@@ -1,0 +1,92 @@
+@startuml aclient_usecase
+title aclient – Penetration Assessment Use Cases
+
+actor Pentester as PT
+
+rectangle "aclient UI" {
+  usecase "Configure Target Endpoint\n- Enter base URL, port\n- Decide on proxy assist" as UC_Config
+  usecase "Authenticate to Target\n- Login existing user\n- Register helper\n- Token management" as UC_Auth
+  usecase "Realtime Eavesdrop & Room Flood\n(Expected: metadata leaks, gateway load)" as UC_RoomFlood
+  usecase "API Flood & Bounds Testing\n(Expected: response latency, errors)" as UC_ApiFlood
+  usecase "SQL Injection Prober\n(Expected: no injection, log responses)" as UC_SQLi
+  usecase "Message Payload Fuzzer\n(Expected: client decrypt failures, stability data)" as UC_Fuzzer
+  usecase "Key Rotation / Participation Stress\n(Expected: broadcast storms, DB growth)" as UC_KeyStress
+  usecase "Username Enumeration Suite\n(Expected: exists/not-found mapping)" as UC_Enum
+  usecase "Proxy Assist Controls\n- Inject headers\n- Custom Origin" as UC_Proxy
+  usecase "Review & Export Results\n- Metrics, logs, CSV/JSON" as UC_Report
+}
+
+PT --> UC_Config
+PT --> UC_Auth
+PT --> UC_RoomFlood
+PT --> UC_ApiFlood
+PT --> UC_SQLi
+PT --> UC_Fuzzer
+PT --> UC_KeyStress
+PT --> UC_Enum
+PT --> UC_Proxy
+PT --> UC_Report
+
+UC_Config .> UC_Proxy : <<extends>>
+UC_ApiFlood .> UC_Report : <<includes>>
+UC_RoomFlood .> UC_Report : <<includes>>
+UC_SQLi .> UC_Report : <<includes>>
+UC_Fuzzer .> UC_Report : <<includes>>
+UC_KeyStress .> UC_Report : <<includes>>
+UC_Enum .> UC_Report : <<includes>>
+
+note right of UC_RoomFlood
+  Controls:
+  - Conversation ID range
+  - Join rate, max sockets
+  Expected output:
+  - Event stream (id, sender, timestamps)
+  - Connection stats
+end note
+
+note bottom of UC_ApiFlood
+  Sub-attacks:
+  - Login/register CPU flood
+  - Large message payloads (<=10MB)
+  - Oversized history fetch (limit parameter)
+  Report: latency, error %, status codes.
+end note
+
+note right of UC_SQLi
+  Inputs:
+  - Path parameters (conversationId, username)
+  - Query params (limit)
+  Expected: Graceful 4xx/5xx, no injection effect.
+end note
+
+note bottom of UC_Fuzzer
+  Payload presets:
+  - Non-hex strings
+  - Odd-length hex
+  - Oversized valid ciphertext
+  Logs decryption failures and client handling.
+end note
+
+note right of UC_KeyStress
+  Steps:
+  - Fetch participant list
+  - Generate new AES key & wraps
+  - Submit rotations repeatedly
+  Observe broadcast volume + DB row counts.
+end note
+
+note bottom of UC_Enum
+  Techniques:
+  - /auth/check-username/:value
+  - /contacts add attempt
+  Output: existence map, server responses.
+end note
+
+note right of UC_Report
+  Features:
+  - Timestamped logs per module
+  - Summary metrics (requests sent, failures)
+  - Export to CSV/JSON
+end note
+
+@enduml
