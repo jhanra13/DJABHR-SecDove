@@ -9,7 +9,8 @@
     "dev": "node --watch server.js",
     "build": "echo 'No build step required for Node.js server'",
     "init-db": "node scripts/initDatabase.js",
-    "verify-db": "node scripts/verifyDatabase.js"
+    "verify-db": "node scripts/verifyDatabase.js",
+    "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest"
   },
   "keywords": [
     "e2ee",
@@ -27,5 +28,13 @@
     "jsonwebtoken": "^9.0.2",
     "socket.io": "^4.8.1",
     "sqlite3": "^5.1.7"
+  },
+  "devDependencies": {
+    "cross-env": "^10.1.0",
+    "jest": "^30.2.0",
+    "supertest": "^7.1.4"
+  },
+  "jest": {
+    "testEnvironment": "node"
   }
 }
