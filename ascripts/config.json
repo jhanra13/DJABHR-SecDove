@@ -1,0 +1,11 @@
+{
+  "base_url": "http://localhost:8000",
+  "username": "dylan",
+  "password": "123123123",
+  "token": "",
+  "conversation_id": 1761629838551,
+  "content_key_number": 1,
+  "message": "Hello from ascripts configuration",
+  "message_json_path": "message_payload.json",
+  "content_key_hex": ""
+}
