@@ -1,47 +1,53 @@
 import { useState } from 'react'
 import HttpClient from '../utils/HttpClient'
+import ResultsPanel from '../components/ResultsPanel'
 
-function EnumerationModule({ config, reporter }) {
-  const [options, setOptions] = useState({
-    wordlist: ['alice', 'bob', 'carol', 'tester']
-  })
+function EnumerationModule({ config, reporter, disabled }) {
+  const [wordlistText, setWordlistText] = useState(['alice', 'bob', 'carol', 'tester'].join('\n'))
   const [running, setRunning] = useState(false)
-  const [results, setResults] = useState(null)
+  const [summary, setSummary] = useState(null)
 
-  const handleChange = (e) => {
-    setOptions({ wordlist: e.target.value.split('\n') })
-  }
+  const usernames = wordlistText
+    .split('\n')
+    .map((entry) => entry.trim())
+    .filter(Boolean)
 
   const start = async () => {
+    if (disabled || running || !usernames.length) return
+    reporter.reset()
+    setSummary(null)
     setRunning(true)
-    const httpClient = new HttpClient(config.baseUrl, config.authToken, config.useProxyAssist)
 
-    for (const username of options.wordlist) {
-      const res = await httpClient.get(`/api/auth/check-username/${username}`)
-      reporter.log({ module: 'enumeration', username, exists: res.data.exists })
+    const httpClient = new HttpClient(config.baseUrl, config.authToken, config.useProxyAssist)
+    for (const username of usernames) {
+      try {
+        const response = await httpClient.get(`/api/auth/check-username/${username}`)
+        reporter.log({ module: 'enumeration', username, exists: Boolean(response?.data?.exists) })
+      } catch (error) {
+        reporter.log({ module: 'enumeration', username, error: error?.message })
+      }
+      setSummary(reporter.summarize())
     }
 
     setRunning(false)
-    setResults(reporter.summarize())
   }
 
   return (
     <div className="module">
-      <h2>Username Enumeration</h2>
-      <form>
-        <label>Wordlist: <textarea value={options.wordlist.join('\n')} onChange={handleChange} /></label>
+      <form className="module-form">
+        <label>
+          <span>Wordlist</span>
+          <textarea value={wordlistText} onChange={(event) => setWordlistText(event.target.value)} rows={6} />
+        </label>
+        <p className="helper">One username per line. Use focused lists to respect rate limits.</p>
       </form>
-      <button onClick={start} disabled={running}>Run Enumeration</button>
-      {results && (
-        <div>
-          <h3>Results</h3>
-          <ul>
-            {results.recentEvents.map((e, i) => <li key={i}>{e.username}: {e.exists ? 'exists' : 'not found'}</li>)}
-          </ul>
-          <button onClick={() => navigator.clipboard.writeText(reporter.exportCSV())}>Copy CSV</button>
-          <button onClick={() => navigator.clipboard.writeText(reporter.exportJSON())}>Copy JSON</button>
-        </div>
-      )}
+      <div className="module-actions">
+        <button type="button" onClick={start} disabled={running || disabled}>
+          Run enumeration
+        </button>
+        <span className="helper">{usernames.length} usernames queued</span>
+      </div>
+      <ResultsPanel title="Enumeration log" summary={summary} reporter={reporter} />
     </div>
   )
 }

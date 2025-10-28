@@ -1,5 +1,11 @@
+import Papa from 'papaparse'
+
 class Reporter {
   constructor() {
+    this.reset()
+  }
+
+  reset() {
     this.events = []
     this.metrics = {}
   }
@@ -17,18 +23,17 @@ class Reporter {
     return {
       totalEvents: this.events.length,
       metrics: this.metrics,
-      recentEvents: this.events.slice(-10)
+      recentEvents: [...this.events].slice(-10)
     }
   }
 
   exportCSV() {
-    // Use papaparse to generate CSV
-    const Papa = require('papaparse')
+    if (!this.events.length) return ''
     return Papa.unparse(this.events)
   }
 
-  exportJSON() {
-    return JSON.stringify({ events: this.events, metrics: this.metrics }, null, 2)
+  exportJSON(pretty = true) {
+    return JSON.stringify({ events: this.events, metrics: this.metrics }, null, pretty ? 2 : undefined)
   }
 }
 

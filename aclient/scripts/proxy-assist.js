@@ -1,6 +1,7 @@
 import express from 'express'
 import { createProxyMiddleware } from 'http-proxy-middleware'
 import cors from 'cors'
+import process from 'node:process'
 
 const app = express()
 const PORT = 3001
@@ -23,7 +24,7 @@ app.use('/socket.io', createProxyMiddleware({
   target: process.env.TARGET_URL || 'https://target.example.com',
   changeOrigin: true,
   ws: true,
-  onProxyReq: (proxyReq, req) => {
+  onProxyReq: (proxyReq) => {
     proxyReq.setHeader('X-Forwarded-For', '203.0.113.9')
   }
 }))

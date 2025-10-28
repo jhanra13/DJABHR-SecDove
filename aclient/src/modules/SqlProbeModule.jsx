@@ -1,52 +1,63 @@
 import { useState } from 'react'
 import HttpClient from '../utils/HttpClient'
+import ResultsPanel from '../components/ResultsPanel'
 
-function SqlProbeModule({ config, reporter }) {
-  const [options, setOptions] = useState({
-    probes: [
-      'GET /api/messages/1 OR 1=1',
-      'GET /api/contacts/bob\' OR \'1\'=\'1/public-key',
-      'GET /api/messages/123?limit=1; DROP TABLE users'
-    ]
-  })
+function SqlProbeModule({ config, reporter, disabled }) {
+  const [probesText, setProbesText] = useState([
+    "GET /api/messages/1%20OR%201=1",
+    "GET /api/contacts/bob'%20OR%20'1'='1/public-key",
+    'GET /api/messages/123?limit=1;--'
+  ].join('\n'))
   const [running, setRunning] = useState(false)
-  const [results, setResults] = useState(null)
+  const [summary, setSummary] = useState(null)
 
-  const handleChange = (e) => {
-    setOptions({ probes: e.target.value.split('\n') })
+  const probes = probesText
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+
+  const runProbe = async (httpClient, probe) => {
+    const [method = 'GET', ...pathParts] = probe.split(' ')
+    const path = pathParts.join(' ') || '/'
+    try {
+      const response = method.toUpperCase() === 'POST'
+        ? await httpClient.post(path, {})
+        : await httpClient.get(path)
+      reporter.log({ module: 'sqlProbe', probe, status: response?.status ?? 0, sample: response?.data })
+    } catch (error) {
+      reporter.log({ module: 'sqlProbe', probe, status: error?.response?.status ?? 'error', message: error?.message })
+    }
+    setSummary(reporter.summarize())
   }
 
   const start = async () => {
+    if (disabled || running || !probes.length) return
+    reporter.reset()
+    setSummary(null)
     setRunning(true)
     const httpClient = new HttpClient(config.baseUrl, config.authToken, config.useProxyAssist)
-
-    for (const probe of options.probes) {
-      const [method, path] = probe.split(' ')
-      const res = method === 'POST' ? await httpClient.post(path, {}) : await httpClient.get(path)
-      reporter.log({ module: 'sqlProbe', probe, status: res.status, body: res.data })
+    for (const probe of probes) {
+      await runProbe(httpClient, probe)
     }
-
     setRunning(false)
-    setResults(reporter.summarize())
   }
 
   return (
     <div className="module">
-      <h2>SQL Injection Prober</h2>
-      <form>
-        <label>Probes (one per line): <textarea value={options.probes.join('\n')} onChange={handleChange} /></label>
+      <form className="module-form">
+        <label>
+          <span>Probe payloads</span>
+          <textarea value={probesText} onChange={(event) => setProbesText(event.target.value)} rows={6} />
+        </label>
+        <p className="helper">Each line should be formatted as <code>METHOD /path?query</code>. Payloads are sent sequentially.</p>
       </form>
-      <button onClick={start} disabled={running}>Run Probes</button>
-      {results && (
-        <div>
-          <h3>Results</h3>
-          <ul>
-            {results.recentEvents.map((e, i) => <li key={i}>{e.probe}: {e.status} - {JSON.stringify(e.body)}</li>)}
-          </ul>
-          <button onClick={() => navigator.clipboard.writeText(reporter.exportCSV())}>Copy CSV</button>
-          <button onClick={() => navigator.clipboard.writeText(reporter.exportJSON())}>Copy JSON</button>
-        </div>
-      )}
+      <div className="module-actions">
+        <button type="button" onClick={start} disabled={running || disabled}>
+          Run probes
+        </button>
+        <span className="helper">{probes.length} probes queued</span>
+      </div>
+      <ResultsPanel title="SQL probe log" summary={summary} reporter={reporter} />
     </div>
   )
 }

@@ -1,65 +1,83 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
-function ConnectPanel({ config, setConfig }) {
+function ConnectPanel({ config, setConfig, isValid }) {
   const [form, setForm] = useState(config)
+
+  useEffect(() => {
+    setForm(config)
+  }, [config])
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
-    setForm(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }))
-  }
-
-  const handleSubmit = (e) => {
-    e.preventDefault()
-    setConfig(form)
+    const nextValue = type === 'checkbox' ? checked : value
+    setForm((prev) => {
+      const updated = { ...prev, [name]: nextValue }
+      setConfig((current) => ({ ...current, [name]: nextValue }))
+      if (name === 'baseUrl' && !updated.socketUrl) {
+        setConfig((current) => ({ ...current, socketUrl: nextValue }))
+        updated.socketUrl = nextValue
+      }
+      return updated
+    })
   }
 
   return (
     <div className="connect-panel">
-      <h2>Target Configuration</h2>
-      <form onSubmit={handleSubmit}>
+      <div className="panel-header">
+        <h2>Target Configuration</h2>
+        <span className={`status-pill ${isValid ? 'ok' : 'warn'}`}>
+          {isValid ? 'Ready' : 'Awaiting details'}
+        </span>
+      </div>
+      <p className="panel-description">
+        Provide the SecureDove API origin, Socket.IO URL, and an authentication token. Updates are saved automatically.
+      </p>
+      <form className="stacked">
         <label>
-          Base URL:
+          <span>Base URL</span>
           <input
-            type="text"
+            type="url"
             name="baseUrl"
             value={form.baseUrl}
             onChange={handleChange}
             placeholder="https://target.example.com"
+            required
           />
         </label>
         <label>
-          Socket URL:
+          <span>Socket URL</span>
           <input
-            type="text"
+            type="url"
             name="socketUrl"
             value={form.socketUrl}
             onChange={handleChange}
             placeholder="https://target.example.com"
+            required
           />
         </label>
         <label>
-          Auth Token:
+          <span>Auth Token</span>
           <textarea
             name="authToken"
             value={form.authToken}
             onChange={handleChange}
-            placeholder="Bearer token from login"
+            placeholder="Paste bearer token from /api/auth/login"
+            rows={4}
           />
         </label>
-        <label>
+        <label className="checkbox">
           <input
             type="checkbox"
             name="useProxyAssist"
             checked={form.useProxyAssist}
             onChange={handleChange}
           />
-          Use Proxy Assist
+          Route traffic through local Proxy Assist (http://localhost:3001)
         </label>
-        <button type="submit">Update Config</button>
       </form>
+      <div className="panel-footnote">
+        ↳ Proxy Assist injects headers such as <code>X-Forwarded-For</code>; start it with <code>npm run proxy</code> when required.
+      </div>
     </div>
   )
 }

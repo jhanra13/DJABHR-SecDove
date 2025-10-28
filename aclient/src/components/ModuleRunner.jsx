@@ -5,7 +5,7 @@ import PayloadFuzzerModule from '../modules/PayloadFuzzerModule'
 import KeyRotationModule from '../modules/KeyRotationModule'
 import EnumerationModule from '../modules/EnumerationModule'
 
-function ModuleRunner({ moduleKey, config, reporter }) {
+function ModuleRunner({ moduleKey, moduleMeta, config, reporter, isConfigValid }) {
   const moduleComponents = {
     realtime: RealtimeModule,
     apiFlood: ApiFloodModule,
@@ -19,7 +19,32 @@ function ModuleRunner({ moduleKey, config, reporter }) {
 
   if (!ModuleComponent) return <div>Select a module</div>
 
-  return <ModuleComponent config={config} reporter={reporter} />
+  return (
+    <section className="module-shell">
+      <header className="module-shell__header">
+        <div>
+          <h2>{moduleMeta.name}</h2>
+          <p>{moduleMeta.description}</p>
+          {moduleMeta.checklist?.length ? (
+            <ul className="module-checklist">
+              {moduleMeta.checklist.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+        <div className={`status-pill ${isConfigValid ? 'ok' : 'warn'}`}>
+          {isConfigValid ? 'Target ready' : 'Configure target to enable run'}
+        </div>
+      </header>
+      <ModuleComponent
+        config={config}
+        reporter={reporter}
+        disabled={!isConfigValid}
+        moduleMeta={moduleMeta}
+      />
+    </section>
+  )
 }
 
 export default ModuleRunner
