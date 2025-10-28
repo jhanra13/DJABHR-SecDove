@@ -1,0 +1,25 @@
+@startuml aclient_seq_enum
+title Sequence – Username Enumeration (Discovery)
+
+actor Pentester as PT
+participant "PentesterUI" as UI
+participant "EnumerationModule" as EM
+participant "HttpClient" as HTTP
+participant "Reporter" as R
+participant "Target API" as API
+
+PT -> UI: Provide wordlist
+UI -> EM: configure(list)
+PT -> UI: Run
+UI -> EM: run()
+loop For each username
+  EM -> HTTP: GET /api/auth/check-username/{name}
+  HTTP -> API: request
+  API --> HTTP: {exists: true|false}
+  HTTP -> EM: response
+  EM -> R: log({name, exists})
+end
+UI -> R: summarize()
+R --> UI: existence map
+
+@enduml

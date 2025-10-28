@@ -1,0 +1,39 @@
+@startuml aclient_seq_key_rotation
+title Sequence – Key Rotation / Participation Stress (Authorized)
+
+actor Pentester as PT
+participant "PentesterUI" as UI
+participant "KeyRotationModule" as KR
+participant "HttpClient" as HTTP
+participant "CryptoHelper" as CH
+participant "Reporter" as R
+participant "Target API" as API
+
+PT -> UI: Configure (rotations, interval)
+UI -> KR: configure(options)
+PT -> UI: Run
+UI -> KR: run()
+KR -> HTTP: GET /api/conversations/{id}
+HTTP -> API: request
+API --> HTTP: participants, latest key number
+HTTP -> KR: participants
+KR -> CH: generateContentKey()
+CH --> KR: new AES key
+loop For each participant
+  KR -> CH: wrapForUser(user, key)
+  CH --> KR: encrypted_content_key (hex)
+end
+KR -> HTTP: POST /api/conversations/{id}/participants { share_history:false, content_key_number: next, entries: [...] }
+HTTP -> API: request
+API --> HTTP: 200/201 with broadcast
+KR -> R: log(rotation result)
+... repeat until count met ...
+UI -> R: summarize()
+R --> UI: event volume, latency, rows created
+
+note right
+ Module operates only on conversations the user is part of, and
+ demonstrates system behavior under frequent authorized rotations.
+end note
+
+@enduml

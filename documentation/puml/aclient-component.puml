@@ -1,0 +1,55 @@
+@startuml aclient_component
+title Component Diagram – aclient Architecture
+
+package "aclient (Browser SPA)" {
+  [Pentester UI] <<ui>>
+  [Core Engine] <<component>>
+  [Reporter] <<component>>
+  [HttpClient] <<lib>>
+  [SocketClient] <<lib>>
+  [Proxy Assist Adapter] <<adapter>>
+
+  [Realtime Module] <<module>>
+  [API Flood Module] <<module>>
+  [SQL Probe Module] <<module>>
+  [Payload Fuzzer Module] <<module>>
+  [Key Rotation Module] <<module>>
+  [Enumeration Module] <<module>>
+}
+
+[Pentester UI] --> [Core Engine]
+[Core Engine] ..> [Reporter]
+[Core Engine] ..> [HttpClient]
+[Core Engine] ..> [SocketClient]
+[HttpClient] ..> [Proxy Assist Adapter]
+[SocketClient] ..> [Proxy Assist Adapter]
+
+[Core Engine] ..> [Realtime Module]
+[Core Engine] ..> [API Flood Module]
+[Core Engine] ..> [SQL Probe Module]
+[Core Engine] ..> [Payload Fuzzer Module]
+[Core Engine] ..> [Key Rotation Module]
+[Core Engine] ..> [Enumeration Module]
+
+node "Target Environment" {
+  [Target API (HTTPS)] <<external>>
+  [Target Socket.IO] <<external>>
+}
+
+[HttpClient] --> [Target API (HTTPS)]
+[SocketClient] --> [Target Socket.IO]
+
+node "(Optional) Local Helper" {
+  [Proxy Assist] <<process>>
+}
+
+[Proxy Assist Adapter] --> [Proxy Assist]
+[Proxy Assist] ..> [Target API (HTTPS)]
+[Proxy Assist] ..> [Target Socket.IO]
+
+note bottom
+ Safety: Modules enforce rate limits and budgets; intended for
+ authorized assessments. No plaintext is accessed by design.
+end note
+
+@enduml

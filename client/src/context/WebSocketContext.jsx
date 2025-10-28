@@ -3,7 +3,14 @@ import { io } from 'socket.io-client';
 import { useAuth } from './AuthContext';
 
 const WebSocketContext = createContext(null);
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:8000';
+const resolveDefaultSocketUrl = () => {
+  if (typeof window !== 'undefined') {
+    return `${window.location.origin.replace(/\/$/, '')}`;
+  }
+  return 'http://localhost:8000';
+};
+
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || resolveDefaultSocketUrl();
 
 export const useWebSocket = () => {
   const context = useContext(WebSocketContext);
@@ -35,7 +42,7 @@ export const WebSocketProvider = ({ children }) => {
 
     socket.on('connect', () => {
       setConnected(true);
-      socket.emit('authenticate', currentSession.token);
+  socket.emit('authenticate', currentSession.token);
     });
 
     socket.on('authenticated', (data) => {

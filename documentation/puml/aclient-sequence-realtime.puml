@@ -1,0 +1,41 @@
+@startuml aclient_seq_realtime
+title Sequence – Realtime Eavesdrop & Room Flood (Metadata Assessment)
+
+actor Pentester as PT
+participant "PentesterUI" as UI
+participant "RealtimeModule" as RM
+participant "SocketClient" as SC
+participant "Reporter" as R
+participant "Target Socket.IO" as SIO
+
+PT -> UI: Configure module (range, joinRate, maxSockets)
+UI -> RM: configure(options)
+PT -> UI: Start assessment
+UI -> RM: run()
+RM -> SC: connect(socketUrl)
+SC -> SIO: TLS handshake + WebSocket upgrade
+SIO --> SC: connected
+RM -> SC: emit('authenticate', token)
+SC -> SIO: authenticate
+SIO --> SC: authenticated {success:true}
+loop For each conversationId in range
+  RM -> SC: emit('join-conversation', id)
+end
+SIO --> SC: new-message / message-updated / message-deleted
+SC -> RM: on(event, payload)
+RM -> R: log({event,payload,ts})
+RM -> R: metric('events/sec', ...)
+... until stop or budget reached ...
+PT -> UI: Stop assessment
+UI -> RM: stop()
+RM -> SC: disconnect()
+UI -> R: summarize()
+R --> UI: results (counts, timelines)
+
+note right
+ Expected: metadata delivery without membership checks.
+ No plaintext is accessed; only IDs, timestamps, sender usernames,
+ and content key numbers in event payloads.
+end note
+
+@enduml

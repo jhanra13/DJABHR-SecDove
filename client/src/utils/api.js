@@ -1,5 +1,12 @@
 // API client using fetch
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+const resolveDefaultApiBase = () => {
+  if (typeof window !== 'undefined') {
+    return `${window.location.origin.replace(/\/$/, '')}/api`;
+  }
+  return 'http://localhost:8000/api';
+};
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || resolveDefaultApiBase();
 
 async function request(path, { method = 'GET', body, params } = {}) {
   const url = new URL(API_BASE_URL + path);

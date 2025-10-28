@@ -1,0 +1,146 @@
+@startuml aclient_class
+title aclient – Class Diagram (High‑Level, Assessment‑Oriented)
+
+skinparam classAttributeIconSize 0
+
+class PentesterUI {
+  - targetConfig: TargetConfig
+  - modules: IAssessmentModule[*]
+  - reporter: Reporter
+  + showDashboard()
+  + configureModule(name, options)
+  + start(name)
+  + stop(name)
+  + exportReport(fmt)
+}
+
+class TargetConfig {
+  + baseUrl: string
+  + socketUrl: string
+  + useProxyAssist: boolean
+  + authToken: string
+  + validate(): boolean
+}
+
+interface IAssessmentModule {
+  + name: string
+  + description: string
+  + configure(options)
+  + run(): void
+  + stop(): void
+  + getResults(): AssessmentResults
+}
+
+class AssessmentResults {
+  + startedAt: Date
+  + finishedAt: Date
+  + summary: map
+  + events: Event[*]
+}
+
+class RealtimeModule {
+  - socket: SocketClient
+  - joinRange: Range
+  - maxSockets: number
+  - joinRate: number
+  - safetyBudget: RateLimit
+}
+
+class ApiFloodModule {
+  - scheduler: Scheduler
+  - endpoints: EndpointSpec[*]
+  - concurrency: number
+  - bodySizeKB: number
+  - durationSec: number
+  - safetyBudget: RateLimit
+}
+
+class SqlProbeModule {
+  - probes: ProbeCase[*]
+  - http: HttpClient
+}
+
+class PayloadFuzzerModule {
+  - patterns: FuzzPattern[*]
+  - http: HttpClient
+}
+
+class KeyRotationModule {
+  - http: HttpClient
+  - crypto: CryptoHelper
+  - rotations: number
+  - intervalMs: number
+}
+
+class EnumerationModule {
+  - wordlist: string[*]
+  - http: HttpClient
+}
+
+class Reporter {
+  + log(event: Event)
+  + metric(name: string, value)
+  + summarize(): map
+  + exportCSV(): blob
+  + exportJSON(): blob
+}
+
+class Scheduler {
+  + run(concurrency: number, task)
+  + cancel()
+}
+
+class HttpClient {
+  + get(path, opts)
+  + post(path, body, opts)
+}
+
+class SocketClient {
+  + connect(url)
+  + emit(event, payload)
+  + on(event, handler)
+  + disconnect()
+}
+
+class ProxyAssist {
+  + enabled: boolean
+  + headerOverrides: map
+}
+
+class CryptoHelper {
+  + generateContentKey(): any
+  + wrapForUser(user, key): string
+}
+
+PentesterUI --> TargetConfig
+PentesterUI --> Reporter
+PentesterUI --> IAssessmentModule
+
+IAssessmentModule <|.. RealtimeModule
+IAssessmentModule <|.. ApiFloodModule
+IAssessmentModule <|.. SqlProbeModule
+IAssessmentModule <|.. PayloadFuzzerModule
+IAssessmentModule <|.. KeyRotationModule
+IAssessmentModule <|.. EnumerationModule
+
+RealtimeModule --> SocketClient
+ApiFloodModule --> Scheduler
+ApiFloodModule --> HttpClient
+SqlProbeModule --> HttpClient
+PayloadFuzzerModule --> HttpClient
+KeyRotationModule --> HttpClient
+KeyRotationModule --> CryptoHelper
+EnumerationModule --> HttpClient
+
+IAssessmentModule --> Reporter : logs
+HttpClient --> ProxyAssist : (optional)
+SocketClient --> ProxyAssist : (optional)
+
+note as N1
+ Safety note: Modules include rate limits and test budgets.
+ They are intended for authorized assessment in controlled environments.
+end note
+
+PentesterUI .. N1
+
+@enduml

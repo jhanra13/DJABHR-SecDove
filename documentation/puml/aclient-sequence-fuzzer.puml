@@ -1,0 +1,30 @@
+@startuml aclient_seq_fuzzer
+title Sequence – Message Payload Fuzzer (Format/UTF‑8 Robustness)
+
+actor Pentester as PT
+participant "PentesterUI" as UI
+participant "PayloadFuzzerModule" as FZ
+participant "HttpClient" as HTTP
+participant "Reporter" as R
+participant "Target API" as API
+
+PT -> UI: Configure patterns (non-hex, odd-length, oversized)
+UI -> FZ: configure(patterns)
+PT -> UI: Run
+UI -> FZ: run()
+loop For each pattern
+  FZ -> HTTP: POST /api/messages {encrypted_msg_content: <pattern>}
+  HTTP -> API: HTTPS request
+  API --> HTTP: 201 Created (opaque store) or 4xx
+  HTTP -> FZ: response
+  FZ -> R: log({patternType, status})
+end
+UI -> R: summarize()
+R --> UI: rates of failures/successes
+
+note right
+ Intent is to observe server/client robustness to malformed
+ ciphertext formats. No plaintext is involved.
+end note
+
+@enduml

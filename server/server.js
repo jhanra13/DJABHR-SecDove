@@ -19,12 +19,47 @@ const isDevelopment = nodeEnv === 'development';
 const PORT = Number.parseInt(getEnv('PORT', 3000), 10);
 const CORS_ORIGIN = getEnv('CORS_ORIGIN', 'http://localhost:5173');
 
-const io = new Server(httpServer, {
-  cors: {
-    origin: CORS_ORIGIN,
-    credentials: true,
-    methods: ['GET', 'POST']
+const parseOrigins = (raw) => raw.split(',').map((origin) => origin.trim()).filter(Boolean);
+const staticAllowedOrigins = new Set(parseOrigins(CORS_ORIGIN));
+
+const corsOptionsDelegate = (req, callback) => {
+  const requestOrigin = req.header('Origin');
+  let allowOrigin = false;
+
+  if (requestOrigin) {
+    if (isDevelopment) {
+      // In development, allow any explicit origin (Vite proxy / LAN IP over HTTPS)
+      allowOrigin = requestOrigin;
+    } else if (staticAllowedOrigins.has(requestOrigin)) {
+      allowOrigin = requestOrigin;
+    } else {
+      try {
+        const originURL = new URL(requestOrigin);
+        const requestHost = req.headers.host?.split(':')[0];
+        if (requestHost && originURL.hostname === requestHost) {
+          allowOrigin = requestOrigin;
+        }
+      } catch {
+        allowOrigin = false;
+      }
+    }
   }
+
+  const corsOptions = {
+    origin: allowOrigin || false,
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+  };
+
+  callback(null, corsOptions);
+};
+
+// Socket.IO CORS: in development, allow any origin (proxied by Vite); in production, restrict to configured origins
+const io = new Server(httpServer, {
+  cors: isDevelopment
+    ? { origin: (origin, callback) => callback(null, true), credentials: true, methods: ['GET', 'POST'] }
+    : { origin: parseOrigins(CORS_ORIGIN), credentials: true, methods: ['GET', 'POST'] }
 });
 app.set('io', io);
 
@@ -40,12 +75,7 @@ app.use(helmet({
   hsts: { maxAge: 31536000, includeSubDomains: true, preload: true }
 }));
 
-app.use(cors({
-  origin: CORS_ORIGIN,
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+app.use(cors(corsOptionsDelegate));
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
