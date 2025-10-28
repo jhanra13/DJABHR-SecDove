@@ -1,0 +1,36 @@
+@startuml aclient_seq_api_flood
+title Sequence – API Flood & Bounds Testing (Authorized Load)
+
+actor Pentester as PT
+participant "PentesterUI" as UI
+participant "ApiFloodModule" as FM
+participant "Scheduler" as S
+participant "HttpClient" as HTTP
+participant "Reporter" as R
+participant "Target API" as API
+
+PT -> UI: Configure (concurrency, duration, bodySizeKB, endpoints)
+UI -> FM: configure(options)
+PT -> UI: Start
+UI -> FM: run()
+FM -> S: run(concurrency, task)
+loop workers
+  S -> HTTP: post/get(endpoint, payload)
+  HTTP -> API: HTTPS request
+  API --> HTTP: response (200/4xx/5xx)
+  HTTP -> FM: response
+  FM -> R: log({endpoint,status,latency})
+end
+... until duration elapsed or stop ...
+PT -> UI: Stop
+UI -> FM: stop()
+UI -> R: summarize()
+R --> UI: metrics (rps, errors, p95 latency)
+
+note right
+ Controls enforce test budgets. Endpoints include login,
+ send message (payload capped by 10MB body limit),
+ and message listing (large limit values).
+end note
+
+@enduml

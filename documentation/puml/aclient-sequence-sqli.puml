@@ -1,0 +1,30 @@
+@startuml aclient_seq_sqli
+title Sequence – SQL Injection Prober (Negative Testing)
+
+actor Pentester as PT
+participant "PentesterUI" as UI
+participant "SqlProbeModule" as SM
+participant "HttpClient" as HTTP
+participant "Reporter" as R
+participant "Target API" as API
+
+PT -> UI: Select SQL Probe cases
+UI -> SM: configure(probes)
+PT -> UI: Run
+UI -> SM: run()
+loop For each probe
+  SM -> HTTP: get/post with probe inputs
+  HTTP -> API: HTTPS request (bound params expected)
+  API --> HTTP: 2xx/4xx/5xx w/ error messages
+  HTTP -> SM: response
+  SM -> R: log({probe, status, bodySnippet})
+end
+UI -> R: summarize()
+R --> UI: report (no injection effects expected)
+
+note right
+ Probes are designed to verify safe parameterization.
+ They should not alter server state beyond standard validation.
+end note
+
+@enduml

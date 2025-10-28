@@ -1,0 +1,53 @@
+@startuml aclient_object
+title Object Diagram – Configured aclient Session
+
+object TargetConfig "TargetConfig" {
+  baseUrl = "https://target.example.com"
+  socketUrl = "https://target.example.com"
+  useProxyAssist = false
+  authToken = "eyJ..."
+}
+
+object Reporter "Reporter" {
+  events = []
+  metrics = {}
+}
+
+object RealtimeModule "RealtimeModule" {
+  joinRange = 1698700000000..1698700000500
+  joinRate = 50/s
+  maxSockets = 5
+}
+
+object ApiFloodModule "ApiFloodModule" {
+  concurrency = 8
+  durationSec = 120
+  bodySizeKB = 1024
+  endpoints = ["POST /api/messages", "GET /api/messages/:id?limit=100000"]
+}
+
+object SqlProbeModule "SqlProbeModule" {
+  probes = ["/api/messages/1 OR 1=1", "/api/contacts/bob' OR '1'='1/public-key"]
+}
+
+object PayloadFuzzerModule "PayloadFuzzerModule" {
+  patterns = ["nonHex", "oddLengthHex", "oversized"]
+}
+
+object KeyRotationModule "KeyRotationModule" {
+  rotations = 5
+  intervalMs = 2000
+}
+
+object EnumerationModule "EnumerationModule" {
+  wordlist = ["alice","bob","carol"]
+}
+
+object PentesterUI "PentesterUI" {
+  modules = [RealtimeModule, ApiFloodModule, SqlProbeModule, PayloadFuzzerModule, KeyRotationModule, EnumerationModule]
+}
+
+PentesterUI ..> TargetConfig
+PentesterUI ..> Reporter
+
+@enduml

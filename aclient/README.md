@@ -128,6 +128,19 @@ Some tests require headers the browser cannot set (e.g., X‑Forwarded‑For, cu
 - SQL injection likely not exploitable (parameterized queries), but tests included to validate.
 - XSS likely not exploitable through message content; document negative results.
 
+## UML Reference
+Detailed PlantUML documentation lives under `documentation/puml/` and mirrors the use cases and examples above. Render them with the PlantUML CLI or any compatible viewer:
+
+- `aclient-usecase.puml` – top-level actors and assessments
+- `aclient-class.puml` – module/component structure
+- `aclient-sequence-*.puml` – per-assessment sequences (Realtime, API Flood, SQL Probe, Payload Fuzzer, Key Rotation, Enumeration)
+- `aclient-object.puml` – snapshot of a configured session
+- `aclient-component.puml` – SPA/component relationships
+- `aclient-deployment.puml` – deployment context with optional proxy assist
+- `aclient-activity-runner.puml`, `aclient-state.puml` – lifecycle and state handling
+
+Each diagram references the concrete request/response examples documented above so the visual model stays aligned with practical execution steps.
+
 ## Module Examples (Requests/Responses)
 
 The examples below assume you have a bearer token in `TOKEN` and, where needed, a known conversation id in `CONV_ID`. Replace `https://target.example.com` with your origin base URL. All JSON bodies must use `Content-Type: application/json`.

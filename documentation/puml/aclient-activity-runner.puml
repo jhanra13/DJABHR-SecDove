@@ -1,0 +1,22 @@
+@startuml aclient_activity_runner
+title Activity Diagram – Running an Assessment Module
+
+start
+:Select module in UI;
+:Configure options (target, budget);
+if (Validate config?) then (valid)
+  :Initialize module;
+  :Start timers/metrics;
+  while (Budget/time remaining?) is (yes)
+    :Issue request / socket op;
+    :Capture response/event;
+    :Log and update metrics;
+  endwhile (no)
+  :Finalize results;
+  :Render report & export;
+else (invalid)
+  :Show errors; return to config;
+endif
+stop
+
+@enduml

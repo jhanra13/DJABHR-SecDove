@@ -1,0 +1,76 @@
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+header {
+  background: #333;
+  color: white;
+  padding: 1rem;
+}
+
+.main {
+  display: flex;
+  flex: 1;
+}
+
+aside {
+  width: 300px;
+  background: #f4f4f4;
+  padding: 1rem;
+  overflow-y: auto;
+}
+
+main {
+  flex: 1;
+  padding: 1rem;
+}
+
+.connect-panel, .module-selector {
+  margin-bottom: 2rem;
+}
+
+.module-selector ul {
+  list-style: none;
+  padding: 0;
+}
+
+.module-selector button {
+  width: 100%;
+  padding: 0.5rem;
+  margin-bottom: 0.5rem;
+  background: #ddd;
+  border: none;
+  cursor: pointer;
+}
+
+.module-selector button.selected {
+  background: #bbb;
+}
+
+.module {
+  border: 1px solid #ccc;
+  padding: 1rem;
+}
+
+.module form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.module label {
+  display: flex;
+  flex-direction: column;
+}
+
+.module input, .module textarea {
+  margin-top: 0.25rem;
+}
+
+.module button {
+  margin-right: 0.5rem;
+  padding: 0.5rem;
+}

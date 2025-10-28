@@ -1,0 +1,37 @@
+@startuml aclient_deployment
+title Deployment Diagram – aclient Assessment Setup
+
+node "Pentester Workstation" {
+  node "Browser" {
+    artifact "aclient SPA" as ACLIENT
+  }
+  node "(Optional) Local Helper" {
+    component "Proxy Assist" as PROXY
+  }
+}
+
+node "Internet" as NET
+
+node "Target Infrastructure" {
+  node "Cloudflared / Reverse Proxy" as CF
+  node "SecureDove Server" as SRV {
+    component "Express API (:8000)" as API
+    component "Socket.IO Gateway" as SIO
+    database "SQLite" as DB
+  }
+}
+
+ACLIENT --> NET
+PROXY .. NET
+NET --> CF
+CF --> API
+CF --> SIO
+API --> DB
+
+note bottom
+ aclient is self-hosted by the pentester and connects over HTTPS.
+ Proxy Assist is optional for header injection experiments in
+ controlled environments.
+end note
+
+@enduml

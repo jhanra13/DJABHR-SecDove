@@ -1,0 +1,18 @@
+@startuml aclient_state
+title State Diagram – aclient Session Lifecycle
+
+[*] --> Idle
+
+state Idle {
+  Idle : No target configured
+}
+
+Idle --> Configured : Set Target + Token
+Configured --> Running : Start Module
+Running --> Paused : Pause
+Paused --> Running : Resume
+Running --> Stopped : Stop / Budget exceeded
+Stopped --> ReportReady : Summarize
+ReportReady --> Idle : Clear / New Session
+
+@enduml
