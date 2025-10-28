@@ -110,6 +110,15 @@ The following accounts have been added as collaborators to the repository:
   - `VITE_API_URL=http://localhost:8000/api`
   - Optionally: `VITE_SOCKET_URL=http://localhost:8000`
 
+**ascripts virtual environment (optional)**
+- Some helper scripts under `ascripts/` use Python with crypto.
+- Create and activate a venv, then install deps:
+  - `python3 -m venv ascripts/venv`
+  - `source ascripts/venv/bin/activate` (Windows: `ascripts\venv\Scripts\activate`)
+  - `pip install cryptography`
+  - Run scripts, e.g. `python ascripts/list_conversations.py`
+  - Deactivate with `deactivate`
+
 ### Running
 
 **Option A: Start both via helper script**

@@ -41,3 +41,7 @@ wheels/
 .installed.cfg
 .egg
 
+# Python virtual environments
+venv/
+.venv/
+ascripts/venv/
