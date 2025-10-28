@@ -20,6 +20,10 @@ const httpsConfig = ((mode) => {
 
 export default defineConfig(({ mode }) => ({
   plugins: [react()],
+  define: {
+    // Ensure environment variables are properly defined during build
+    'process.env': {}
+  },
   server: {
     host: true,
     port: 5173,
@@ -40,6 +44,8 @@ export default defineConfig(({ mode }) => ({
   },
   build: {
     outDir: 'dist',
-    assetsDir: 'assets'
+    assetsDir: 'assets',
+    sourcemap: false,
+    minify: 'terser'
   }
 }));

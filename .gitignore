@@ -1,14 +1,29 @@
-# Python bytecode and cache
+node_modules/
+.env
+.env.local
+.env.*.local
+dist/
+build/
+.DS_Store
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.vite/
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+database/
+*.db
+.vercel
+
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
-
-# C extensions
 *.so
-*.pyd
-*.dll
-
-# Distribution / packaging
 .Python
 build/
 develop-eggs/
@@ -22,150 +37,7 @@ parts/
 sdist/
 var/
 wheels/
-pip-wheel-metadata/
-share/python-wheels/
 *.egg-info/
 .installed.cfg
-*.egg
-MANIFEST
+.egg
 
-# Virtual environments
-.venv/
-venv/
-ENV/
-env/
-.conda/
-
-# PyInstaller
-*.manifest
-*.spec
-
-# Installer logs
-pip-log.txt
-pip-delete-this-directory.txt
-
-# Unit test / coverage reports
-htmlcov/
-.tox/
-.nox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.py,cover
-.hypothesis/
-.pytest_cache/
-
-# Type checker caches
-.mypy_cache/
-.dmypy.json
-dmypy.json
-
-# Jupyter Notebook
-.ipynb_checkpoints/
-.profile_default/
-ipython_config.py
-
-# IDEs and editors
-.idea/
-.vscode/
-.history/
-*.code-workspace
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-
-# OS-generated files
-.DS_Store
-Thumbs.db
-ehthumbs.db
-desktop.ini
-
-# Logs
-logs/
-*.log
-
-# Environment and secrets
-.env
-.env.*
-*.env
-*.key
-*.pem
-*.crt
-*.pub
-*.secret
-secrets.json
-
-# Local data/outputs (common for small class projects)
-data/
-outputs/
-plots/
-
-# Matplotlib cache
-.matplotlib/
-
-# Temporary files
-~$*
-*.tmp
-*.temp
-*.bak
-
-# Node.js dependencies (if using JS/TS backend or frontend)
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Java (if parts use it)
-*.class
-*.jar
-*.war
-*.ear
-*.iml
-*.ipr
-*.iws
-/out/
-
-# C/C++ / Rust builds
-*.o
-*.obj
-*.dylib
-*.exe
-*.out
-*.a
-*.lib
-target/
-
-# Go
-bin/
-*.test
-
-# Coverage / Testing (extra)
-coverage/
-*.lcov
-*.gcda
-*.gcno
-*.gcov
-
-# Database / Cache
-*.db
-*.sqlite
-*.sqlite3
-*.lock
-
-# Docker
-*.pid
-*.seed
-*.pid.lock
-*.tar
-docker-compose.override.yml
-
-# Git conflict/patch files
-*.orig
-*.rej
-*.patch
-*.diff
